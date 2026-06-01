@@ -207,6 +207,38 @@ class OpenClawApi {
     }
   }
 
+  Future<ProductRecord?> updateProduct({
+    required String stockId,
+    required String productName,
+    required double costPrice,
+    required double sellingPrice,
+    String operator = 'mobile-scan',
+    String reason = 'Product edit from mobile scan',
+  }) async {
+    final response = await _request(
+      '/products/update',
+      method: 'POST',
+      data: {
+        'stock_id': stockId,
+        'product_id': stockId,
+        'barcode': stockId,
+        'operator': operator,
+        'reason': reason,
+        'product_name': productName,
+        'productName': productName,
+        'name': productName,
+        'cost_price': costPrice,
+        'costPrice': costPrice,
+        'cost': costPrice,
+        'selling_price': sellingPrice,
+        'sellingPrice': sellingPrice,
+        'price': sellingPrice,
+      },
+    );
+    final row = _firstRow(_asMap(response.data));
+    return row == null ? null : ProductRecord.fromJson(row);
+  }
+
   Future<List<ProductRecord>> lowStockProducts() async => _loadProducts('/stock/low');
 
   Future<List<ProductRecord>> outOfStockProducts() async => _loadProducts('/stock/out');
@@ -256,6 +288,41 @@ class OpenClawApi {
   }
 
   Future<List<Map<String, dynamic>>> getTopProductsToday() => _getRows('/sales/top-products/today');
+
+  Future<List<Map<String, dynamic>>> listArchiveRuns({
+    int limit = 90,
+    String? month,
+    int? page,
+    int? pageSize,
+  }) async {
+    final query = <String, dynamic>{};
+    if (month != null && month.trim().isNotEmpty) {
+      query['month'] = month.trim();
+      if (page != null) query['page'] = page;
+      if (pageSize != null) query['page_size'] = pageSize;
+    } else {
+      query['limit'] = limit;
+    }
+    final json = await _getMap('/archive/runs', query: query);
+    final rows = json['rows'] as List<dynamic>? ?? const <dynamic>[];
+    return rows.whereType<Map>().map((row) => Map<String, dynamic>.from(row)).toList(growable: false);
+  }
+
+  Future<Map<String, dynamic>> getArchiveSalesDetail(
+    String runId, {
+    String? q,
+    int page = 1,
+    int limit = 50,
+    String sort = 'transaction_desc',
+  }) async {
+    final query = <String, dynamic>{
+      'page': page,
+      'limit': limit,
+      'sort': sort,
+      if (q != null && q.trim().isNotEmpty) 'q': q.trim(),
+    };
+    return _getMap('/archive/runs/${Uri.encodeComponent(runId)}/sales-detail', query: query);
+  }
 
   Future<List<VendorDirectoryRecord>> searchVendorDirectory({
     String? q,
@@ -499,6 +566,27 @@ class OpenClawApi {
     return ExpiryLotRecord.fromJson(_asMap(response.data));
   }
 
+  Future<ExpiryLotRecord> updateExpiryLot(String id, Map<String, dynamic> input) async {
+    _ensureWriteEnabled();
+    final response = await _request(
+      '/expiry/${Uri.encodeComponent(id)}',
+      method: 'PUT',
+      data: input,
+    );
+    return ExpiryLotRecord.fromJson(_asMap(response.data));
+  }
+
+  Future<Map<String, dynamic>> deleteExpiryLot(String id) async {
+    _ensureWriteEnabled();
+    final response = await _request('/expiry/${Uri.encodeComponent(id)}', method: 'DELETE');
+    return _asMap(response.data);
+  }
+
+  Future<String> getNextExpiryBatchNo(String stockId) async {
+    final json = await _getMap('/expiry/next-batch-no', query: {'stock_id': stockId});
+    return (json['batch_no'] ?? json['batchNo'] ?? '').toString().trim();
+  }
+
   Future<List<Map<String, dynamic>>> getRecentAdjustments() async {
     final rows = await _getRows('/stock/recent-adjustments');
     return rows;
@@ -547,6 +635,24 @@ class OpenClawApi {
   Future<Map<String, dynamic>> getProductSupplierSummary(String stockId) async {
     final json = await _getMap('/product-suppliers', query: {'stock_id': stockId});
     return _asMap(json['summary']);
+  }
+
+  Future<Map<String, dynamic>> createProductSupplier(Map<String, dynamic> input) async {
+    _ensureWriteEnabled();
+    final response = await _request('/product-suppliers', method: 'POST', data: input);
+    return _asMap(response.data);
+  }
+
+  Future<Map<String, dynamic>> updateProductSupplier(String id, Map<String, dynamic> input) async {
+    _ensureWriteEnabled();
+    final response = await _request('/product-suppliers/${Uri.encodeComponent(id)}', method: 'PUT', data: input);
+    return _asMap(response.data);
+  }
+
+  Future<Map<String, dynamic>> deleteProductSupplier(String id) async {
+    _ensureWriteEnabled();
+    final response = await _request('/product-suppliers/${Uri.encodeComponent(id)}', method: 'DELETE');
+    return _asMap(response.data);
   }
 
   Future<Map<String, dynamic>> getInventoryOverview() async {

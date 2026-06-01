@@ -19,6 +19,12 @@
 - Scan screen layout was fixed so the barcode scanner card no longer has malformed nesting.
 - The app language now defaults to English and can be switched between English and Vietnamese from Settings.
 - The demo mode banner now reflects write-enabled mode in English and Vietnamese.
+- Scan Barcode and Products now share the same action sheet for:
+  - adjust stock
+  - edit product
+  - manage suppliers
+  - add expiry lot
+- Sales now supports a selected business date by reading archive runs from the backend and loading the matching sales detail when the date is not today.
 
 ## Completed
 
@@ -28,6 +34,9 @@
 - Added Dio API client with optional bearer token support
 - Added write-enabled demo helpers for:
   - stock adjustment
+  - product edit
+  - supplier management
+  - expiry lot maintenance
   - expiry lot creation
   - purchase order draft creation
   - purchase order confirmation
@@ -63,9 +72,19 @@
 - `GET /pos-dashboard/api/stock/negative`
 - `GET /pos-dashboard/api/stock/recent-adjustments`
 - `POST /pos-dashboard/api/stock/direct-adjust`
+- `POST /pos-dashboard/api/products/update`
+- `GET /pos-dashboard/api/product-suppliers?stock_id=`
+- `POST /pos-dashboard/api/product-suppliers`
+- `PUT /pos-dashboard/api/product-suppliers/:id`
+- `DELETE /pos-dashboard/api/product-suppliers/:id`
+- `GET /pos-dashboard/api/expiry/next-batch-no?stock_id=`
+- `PUT /pos-dashboard/api/expiry/:id`
+- `DELETE /pos-dashboard/api/expiry/:id`
 - `GET /pos-dashboard/api/sales/today`
 - `GET /pos-dashboard/api/sales/summary/today`
 - `GET /pos-dashboard/api/sales/top-products/today`
+- `GET /pos-dashboard/api/archive/runs?month=YYYY-MM&page=1&page_size=50`
+- `GET /pos-dashboard/api/archive/runs/:id/sales-detail?page=1&limit=200&sort=transaction_desc`
 - `GET /pos-dashboard/api/vendors/search`
 - `GET /pos-dashboard/api/vendors/summary`
 - `GET /pos-dashboard/api/vendors/:id`

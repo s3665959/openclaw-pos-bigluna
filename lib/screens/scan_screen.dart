@@ -8,7 +8,7 @@ import '../core/formatters.dart';
 import '../models/pos_models.dart';
 import '../l10n/app_localizations.dart';
 import '../widgets/common_widgets.dart';
-import 'operations_screen.dart';
+import '../widgets/product_actions_sheet.dart';
 
 class ScanScreen extends StatefulWidget {
   const ScanScreen({super.key});
@@ -67,18 +67,27 @@ class _ScanScreenState extends State<ScanScreen> {
     }
   }
 
-  Future<void> _openAdjustment(ProductRecord product) async {
-    await Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => OperationsScreen(
-          section: OperationsSection.stockAdjustment,
-          initialStockId: product.id,
-          initialProductName: product.name,
-          initialBarcode: product.barcode,
-          initialStockQty: product.stockQty,
-        ),
-      ),
+  Future<void> _openActions(ProductRecord product, ProductActionMode mode) async {
+    final changed = await showProductActionsSheet(
+      context,
+      product,
+      initialMode: mode,
+      onProductChanged: (updated) {
+        if (!mounted) return;
+        setState(() {
+          _product = updated;
+        });
+      },
     );
+    if (changed == true) {
+      final refreshed = await AppServices.api.lookupBarcode(product.barcode) ?? await AppServices.api.lookupProductDetail(product.id);
+      if (!mounted) return;
+      if (refreshed != null) {
+        setState(() {
+          _product = refreshed;
+        });
+      }
+    }
   }
 
   @override
@@ -174,55 +183,35 @@ class _ScanScreenState extends State<ScanScreen> {
                   KeyValueRow(label: 'On hand', value: formatQuantity(product.stockQty)),
                   KeyValueRow(label: 'Cost', value: product.cost == null ? '-' : formatMoney(product.cost!)),
                   const SizedBox(height: 12),
-                  FilledButton.icon(
-                    onPressed: AppServices.config.demoReadOnly ? null : () => _openAdjustment(product),
-                    icon: const Icon(Icons.swap_vert_rounded),
-                    label: const Text('Adjust stock from this item'),
-                  ),
-                  const SizedBox(height: 8),
-                  FilledButton.tonalIcon(
-                    onPressed: AppServices.config.demoReadOnly
-                        ? null
-                        : () async {
-                            final confirm = await showDialog<bool>(
-                              context: context,
-                              builder: (dialogContext) {
-                                return AlertDialog(
-                                  title: const Text('Confirm demo PO creation'),
-                                  content: Text('Create a purchase order for ${product.name}?'),
-                                  actions: [
-                                    TextButton(
-                                      onPressed: () => Navigator.of(dialogContext).pop(false),
-                                      child: const Text('Cancel'),
-                                    ),
-                                    FilledButton(
-                                      onPressed: () => Navigator.of(dialogContext).pop(true),
-                                      child: const Text('Confirm'),
-                                    ),
-                                  ],
-                                );
-                              },
-                            );
-                            if (confirm != true) return;
-                            try {
-                              final response = await AppServices.api.createPurchaseOrderFromProduct(product);
-                              final orders = (response['response'] as Map?)?['orders'] as List<dynamic>? ?? const <dynamic>[];
-                              final poNos = orders.whereType<Map>().map((row) => row['po_no']?.toString() ?? row['poNo']?.toString() ?? '').where((value) => value.isNotEmpty).toList(growable: false);
-                              if (!context.mounted) return;
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text(poNos.isEmpty ? 'Demo PO created successfully' : 'Demo PO created successfully: ${poNos.join(', ')}'),
-                                ),
-                              );
-                            } catch (error) {
-                              if (!context.mounted) return;
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(content: Text(error.toString())),
-                              );
-                            }
-                          },
-                    icon: const Icon(Icons.local_shipping_rounded),
-                    label: const Text('Create demo PO'),
+                  GridView.count(
+                    physics: const NeverScrollableScrollPhysics(),
+                    shrinkWrap: true,
+                    crossAxisCount: 2,
+                    mainAxisSpacing: 8,
+                    crossAxisSpacing: 8,
+                    childAspectRatio: 2.8,
+                    children: [
+                      FilledButton.icon(
+                        onPressed: AppServices.config.demoReadOnly ? null : () => _openActions(product, ProductActionMode.adjust),
+                        icon: const Icon(Icons.swap_vert_rounded),
+                        label: const Text('Adjust stock'),
+                      ),
+                      OutlinedButton.icon(
+                        onPressed: () => _openActions(product, ProductActionMode.edit),
+                        icon: const Icon(Icons.edit_rounded),
+                        label: const Text('Edit product'),
+                      ),
+                      OutlinedButton.icon(
+                        onPressed: () => _openActions(product, ProductActionMode.suppliers),
+                        icon: const Icon(Icons.people_alt_rounded),
+                        label: const Text('Manage suppliers'),
+                      ),
+                      OutlinedButton.icon(
+                        onPressed: () => _openActions(product, ProductActionMode.expiry),
+                        icon: const Icon(Icons.event_busy_rounded),
+                        label: const Text('Add expiry lot'),
+                      ),
+                    ],
                   ),
                   if (AppServices.config.demoReadOnly)
                     const Padding(

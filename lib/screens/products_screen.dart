@@ -6,7 +6,7 @@ import '../core/api/app_services.dart';
 import '../core/formatters.dart';
 import '../models/pos_models.dart';
 import '../widgets/common_widgets.dart';
-import 'operations_screen.dart';
+import '../widgets/product_actions_sheet.dart';
 
 class ProductsScreen extends StatefulWidget {
   const ProductsScreen({super.key});
@@ -25,9 +25,6 @@ class _ProductsScreenState extends State<ProductsScreen> {
   String? _selectedCategory;
   String? _selectedVendor;
   String? _selectedStockStatus;
-  bool _detailLoading = false;
-  bool _detailActionBusy = false;
-  Object? _detailError;
 
   @override
   void initState() {
@@ -67,167 +64,14 @@ class _ProductsScreenState extends State<ProductsScreen> {
     await _future;
   }
 
-  Future<void> _openDetails(ProductRecord product) async {
-    setState(() {
-      _detailError = null;
-      _detailLoading = true;
-    });
-
-    try {
-      final detail = await AppServices.api.lookupProductDetail(product.barcode.isNotEmpty ? product.barcode : product.id) ?? product;
-      final suppliers = await AppServices.api.getProductSuppliers(detail.id).catchError((_) => <Map<String, dynamic>>[]);
-      if (!mounted) return;
-      setState(() {
-        _detailLoading = false;
-        _detailError = null;
-      });
-      await showModalBottomSheet<void>(
-        context: context,
-        isScrollControlled: true,
-        showDragHandle: true,
-        builder: (context) {
-          return DraggableScrollableSheet(
-            expand: false,
-            initialChildSize: 0.78,
-            minChildSize: 0.45,
-            maxChildSize: 0.95,
-            builder: (context, controller) {
-              return ListView(
-                controller: controller,
-                padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
-                children: [
-                  Text(detail.name, style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800)),
-                  const SizedBox(height: 8),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: [
-                      InfoPill(label: detail.status),
-                      InfoPill(label: detail.category),
-                      InfoPill(label: detail.vendor),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  SectionCard(
-                    title: 'Product details',
-                    child: Column(
-                      children: [
-                        KeyValueRow(label: 'Stock ID', value: detail.id),
-                        KeyValueRow(label: 'Barcode', value: detail.barcode),
-                        KeyValueRow(label: 'Price', value: formatMoney(detail.price)),
-                        KeyValueRow(label: 'Cost', value: detail.cost == null ? '-' : formatMoney(detail.cost!)),
-                        KeyValueRow(label: 'On hand', value: formatQuantity(detail.stockQty)),
-                        KeyValueRow(label: 'Reorder point', value: detail.reorderLevel == null ? '-' : formatQuantity(detail.reorderLevel!)),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  SectionCard(
-                    title: 'Vendor link',
-                    subtitle: 'Data from /product-suppliers',
-                    child: Column(
-                      children: [
-                        KeyValueRow(label: 'Supplier rows', value: '${suppliers.length}'),
-                        if (suppliers.isEmpty)
-                          const Padding(
-                            padding: EdgeInsets.only(top: 8),
-                            child: Text('No supplier link rows from API'),
-                          ),
-                        for (final supplier in suppliers.take(3))
-                          KeyValueRow(
-                            label: supplier['supplier_name']?.toString() ?? '',
-                            value: '${supplier['vendor_code'] ?? ''}${supplier['is_default'] == true ? ' (default)' : ''}',
-                          ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  FilledButton.icon(
-                    onPressed: detail.id.isEmpty || AppServices.config.demoReadOnly
-                        ? null
-                        : () {
-                            Navigator.of(context).pop();
-                            Navigator.of(context).push(
-                              MaterialPageRoute(
-                                builder: (_) => OperationsScreen(
-                                  section: OperationsSection.stockAdjustment,
-                                  initialStockId: detail.id,
-                                  initialProductName: detail.name,
-                                  initialBarcode: detail.barcode,
-                                  initialStockQty: detail.stockQty,
-                                ),
-                              ),
-                            );
-                          },
-                    icon: const Icon(Icons.swap_vert_rounded),
-                    label: const Text('Adjust stock'),
-                  ),
-                  const SizedBox(height: 8),
-                  FilledButton.tonalIcon(
-                    onPressed: detail.id.isEmpty || AppServices.config.demoReadOnly || _detailActionBusy
-                        ? null
-                        : () async {
-                            final confirm = await showDialog<bool>(
-                              context: context,
-                              builder: (dialogContext) {
-                                return AlertDialog(
-                                  title: const Text('Confirm demo PO creation'),
-                                  content: Text('Create a purchase order for ${detail.name} using the live vendor mapping from the backend?'),
-                                  actions: [
-                                    TextButton(
-                                      onPressed: () => Navigator.of(dialogContext).pop(false),
-                                      child: const Text('Cancel'),
-                                    ),
-                                    FilledButton(
-                                      onPressed: () => Navigator.of(dialogContext).pop(true),
-                                      child: const Text('Confirm'),
-                                    ),
-                                  ],
-                                );
-                              },
-                            );
-                            if (confirm != true) return;
-                            if (!mounted) return;
-                            setState(() => _detailActionBusy = true);
-                            try {
-                              final response = await AppServices.api.createPurchaseOrderFromProduct(detail);
-                              final orders = (response['response'] as Map?)?['orders'] as List<dynamic>? ?? const <dynamic>[];
-                              final poNos = orders.whereType<Map>().map((row) => row['po_no']?.toString() ?? row['poNo']?.toString() ?? '').where((value) => value.isNotEmpty).toList(growable: false);
-                              if (!context.mounted) return;
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text(poNos.isEmpty ? 'Demo PO created successfully' : 'Demo PO created successfully: ${poNos.join(', ')}'),
-                                ),
-                              );
-                            } catch (error) {
-                              if (!context.mounted) return;
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(content: Text(error.toString())),
-                              );
-                            } finally {
-                              if (mounted) {
-                                setState(() => _detailActionBusy = false);
-                              }
-                            }
-                          },
-                    icon: const Icon(Icons.local_shipping_rounded),
-                    label: const Text('Create demo PO'),
-                  ),
-                ],
-              );
-            },
-          );
-        },
-      );
-    } catch (error) {
-      if (!mounted) return;
-      setState(() {
-        _detailLoading = false;
-        _detailError = error;
-      });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(error.toString())),
-      );
+  Future<void> _openActions(ProductRecord product, {ProductActionMode initialMode = ProductActionMode.adjust}) async {
+    final changed = await showProductActionsSheet(
+      context,
+      product,
+      initialMode: initialMode,
+    );
+    if (changed == true) {
+      await _refresh();
     }
   }
 
@@ -380,7 +224,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
                       Card(
                         elevation: 0,
                         child: ListTile(
-                          onTap: () => _openDetails(product),
+                          onTap: () => _openActions(product),
                           title: Text(product.name, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w700)),
                           subtitle: Padding(
                             padding: const EdgeInsets.only(top: 4),
@@ -404,15 +248,6 @@ class _ProductsScreenState extends State<ProductsScreen> {
                       ),
                       const SizedBox(height: 8),
                     ],
-                    if (_detailLoading) const Padding(padding: EdgeInsets.only(top: 8), child: LoadingStateView(message: 'Loading details...')),
-                    if (_detailError != null)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 8),
-                        child: Text(
-                          _detailError.toString(),
-                          style: TextStyle(color: Theme.of(context).colorScheme.error),
-                        ),
-                      ),
                   ],
                 );
               },
