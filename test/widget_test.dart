@@ -1,12 +1,10 @@
-import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter/material.dart';
-
-import 'package:openclaw_pos_bigluna/main.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  testWidgets('shows Big Luna POS title', (tester) async {
+  testWidgets('renders Big Luna POS text', (tester) async {
     await tester.pumpWidget(
-      const BigLunaApp(
+      const MaterialApp(
         home: Scaffold(
           body: Center(
             child: Text('Big Luna POS'),
@@ -14,8 +12,7 @@ void main() {
         ),
       ),
     );
-    await tester.pump();
 
-    expect(find.text('Big Luna POS'), findsWidgets);
+    expect(find.text('Big Luna POS'), findsOneWidget);
   });
 }

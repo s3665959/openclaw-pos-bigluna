@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../core/api/app_services.dart';
 import '../models/pos_models.dart';
+import '../l10n/app_localizations.dart';
 import '../widgets/common_widgets.dart';
 
 class VendorsScreen extends StatefulWidget {
@@ -156,9 +157,10 @@ class _VendorsScreenState extends State<VendorsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return AppFrame(
-      title: 'Vendors',
-      actions: [IconButton(onPressed: _refresh, icon: const Icon(Icons.refresh_rounded))],
+      title: l10n.vendors,
+      actions: [IconButton(tooltip: l10n.refresh, onPressed: _refresh, icon: const Icon(Icons.refresh_rounded))],
       child: RefreshIndicator(
         onRefresh: _refresh,
         child: ListView(
@@ -166,14 +168,14 @@ class _VendorsScreenState extends State<VendorsScreen> {
           physics: const AlwaysScrollableScrollPhysics(),
           children: [
             SectionCard(
-              title: 'ค้นหา vendor',
-              subtitle: 'ใช้งาน /vendors/search และ /vendors/summary',
+              title: 'Search vendors',
+              subtitle: 'Uses /vendors/search and /vendors/summary',
               child: Column(
                 children: [
                   TextField(
                     controller: _searchController,
                     decoration: const InputDecoration(
-                      labelText: 'ชื่อ vendor หรือ code',
+                      labelText: 'Vendor name or code',
                       prefixIcon: Icon(Icons.search_rounded),
                     ),
                     onSubmitted: (value) async {
@@ -194,7 +196,7 @@ class _VendorsScreenState extends State<VendorsScreen> {
                       await _future;
                     },
                     icon: const Icon(Icons.search_rounded),
-                    label: const Text('ค้นหา'),
+                    label: const Text('Search'),
                   ),
                 ],
               ),
@@ -206,7 +208,7 @@ class _VendorsScreenState extends State<VendorsScreen> {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Padding(
                     padding: EdgeInsets.only(top: 80),
-                    child: LoadingStateView(message: 'กำลังโหลด vendors...'),
+                    child: LoadingStateView(message: 'Loading vendors...'),
                   );
                 }
                 if (snapshot.hasError) {
@@ -225,14 +227,14 @@ class _VendorsScreenState extends State<VendorsScreen> {
                       physics: const NeverScrollableScrollPhysics(),
                       shrinkWrap: true,
                       crossAxisCount: MediaQuery.of(context).size.width > 700 ? 4 : 2,
-                      childAspectRatio: 1.7,
+                      mainAxisExtent: 132,
                       mainAxisSpacing: 12,
                       crossAxisSpacing: 12,
                       children: [
-                        StatCard(label: 'ทั้งหมด', value: '${summary['total_vendors'] ?? vendors.length}', icon: Icons.people_alt_rounded),
-                        StatCard(label: 'มีสินค้าเชื่อม', value: '${summary['vendors_with_products'] ?? 0}', icon: Icons.link_rounded),
-                        StatCard(label: 'ไม่มีสินค้าเชื่อม', value: '${summary['vendors_missing_product_links'] ?? 0}', icon: Icons.link_off_rounded),
-                        StatCard(label: 'สินค้าเชื่อม', value: '${summary['linked_product_count'] ?? 0}', icon: Icons.inventory_2_rounded),
+                        StatCard(label: 'Total', value: '${summary['total_vendors'] ?? vendors.length}', icon: Icons.people_alt_rounded),
+                        StatCard(label: 'With products', value: '${summary['vendors_with_products'] ?? 0}', icon: Icons.link_rounded),
+                        StatCard(label: 'Without links', value: '${summary['vendors_missing_product_links'] ?? 0}', icon: Icons.link_off_rounded),
+                        StatCard(label: 'Linked products', value: '${summary['linked_product_count'] ?? 0}', icon: Icons.inventory_2_rounded),
                       ],
                     ),
                     const SizedBox(height: 12),
@@ -240,8 +242,8 @@ class _VendorsScreenState extends State<VendorsScreen> {
                       const Padding(
                         padding: EdgeInsets.only(top: 40),
                         child: EmptyStateView(
-                          title: 'ไม่พบ vendor',
-                          description: 'ลองเปลี่ยนคำค้นหรือรีเฟรชข้อมูล',
+                          title: 'No vendors found',
+                          description: 'Try a different search term or refresh the data.',
                         ),
                       )
                     else

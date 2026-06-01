@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../core/api/app_services.dart';
 import '../core/formatters.dart';
 import '../models/pos_models.dart';
+import '../l10n/app_localizations.dart';
 import '../widgets/common_widgets.dart';
 
 class SalesScreen extends StatefulWidget {
@@ -24,21 +25,23 @@ class _SalesScreenState extends State<SalesScreen> {
   Future<_SalesData> _load() async {
     final api = AppServices.api;
     final values = await Future.wait<Object?>([
-      api.getTodaySalesSummary().catchError((_) => const SalesSummary(
-            totalSalesAmount: 0,
-            transactionCount: 0,
-            averageSaleValue: 0,
-            firstSaleTime: '',
-            lastSaleTime: '',
-          )),
-      api.getTodaySales().catchError((_) => <SalesRecord>[]),
-      api.getTopProductsToday().catchError((_) => <Map<String, dynamic>>[]),
+      _loadResult(() => api.getTodaySalesSummary()),
+      _loadResult(() => api.getTodaySales()),
+      _loadResult(() => api.getTopProductsToday()),
     ]);
     return _SalesData(
-      summary: values[0] as SalesSummary,
-      rows: values[1] as List<SalesRecord>,
-      topProducts: values[2] as List<Map<String, dynamic>>,
+      summary: values[0] as _LoadResult<SalesSummary>,
+      rows: values[1] as _LoadResult<List<SalesRecord>>,
+      topProducts: values[2] as _LoadResult<List<Map<String, dynamic>>>,
     );
+  }
+
+  Future<_LoadResult<T>> _loadResult<T>(Future<T> Function() loader) async {
+    try {
+      return _LoadResult<T>(data: await loader());
+    } catch (error) {
+      return _LoadResult<T>(error: error);
+    }
   }
 
   Future<void> _refresh() async {
@@ -50,9 +53,10 @@ class _SalesScreenState extends State<SalesScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return AppFrame(
-      title: 'Sales',
-      actions: [IconButton(onPressed: _refresh, icon: const Icon(Icons.refresh_rounded))],
+      title: l10n.sales,
+      actions: [IconButton(tooltip: l10n.refresh, onPressed: _refresh, icon: const Icon(Icons.refresh_rounded))],
       child: RefreshIndicator(
         onRefresh: _refresh,
         child: ListView(
@@ -60,38 +64,61 @@ class _SalesScreenState extends State<SalesScreen> {
           padding: const EdgeInsets.all(16),
           children: [
             SectionCard(
-              title: 'ยอดขายวันนี้',
-              subtitle: 'connector ปัจจุบัน exposed แค่ today sales',
+              title: 'Today sales',
+              subtitle: 'The current connector only exposes today sales',
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const InfoPill(label: 'Historical range ยังไม่พร้อม'),
+                  const InfoPill(label: 'Historical range not available yet'),
                   const SizedBox(height: 12),
                   FutureBuilder<_SalesData>(
                     future: _future,
                     builder: (context, snapshot) {
                       if (snapshot.connectionState == ConnectionState.waiting) {
-                        return const LoadingStateView(message: 'กำลังโหลด sales...');
+                        return const LoadingStateView(message: 'Loading sales...');
                       }
                       if (snapshot.hasError) {
                         return ErrorStateView(message: snapshot.error.toString(), onRetry: _refresh);
                       }
 
                       final data = snapshot.data!;
+                      final summary = data.summary.data;
                       return Column(
                         children: [
                           GridView.count(
                             physics: const NeverScrollableScrollPhysics(),
                             shrinkWrap: true,
                             crossAxisCount: MediaQuery.of(context).size.width > 700 ? 4 : 2,
-                            childAspectRatio: 1.7,
+                            mainAxisExtent: 132,
                             mainAxisSpacing: 12,
                             crossAxisSpacing: 12,
                             children: [
-                              StatCard(label: 'ยอดรวม', value: formatMoney(data.summary.totalSalesAmount), icon: Icons.attach_money_rounded),
-                              StatCard(label: 'ธุรกรรม', value: '${data.summary.transactionCount}', icon: Icons.receipt_long_rounded),
-                              StatCard(label: 'เฉลี่ย', value: formatMoney(data.summary.averageSaleValue), icon: Icons.analytics_rounded),
-                              StatCard(label: 'ช่วงเวลา', value: '${data.summary.firstSaleTime.isEmpty ? '-' : data.summary.firstSaleTime} - ${data.summary.lastSaleTime.isEmpty ? '-' : data.summary.lastSaleTime}', icon: Icons.schedule_rounded),
+                              StatCard(
+                                label: 'Total',
+                                value: summary == null ? 'API error' : formatMoney(summary.totalSalesAmount),
+                                icon: Icons.attach_money_rounded,
+                                subtitle: data.summary.error?.toString(),
+                              ),
+                              StatCard(
+                                label: 'Orders',
+                                value: summary == null ? 'API error' : '${summary.transactionCount}',
+                                icon: Icons.receipt_long_rounded,
+                                subtitle: data.summary.error?.toString(),
+                              ),
+                              StatCard(
+                                label: 'Average',
+                                value: summary == null ? 'API error' : formatMoney(summary.averageSaleValue),
+                                icon: Icons.analytics_rounded,
+                                subtitle: data.summary.error?.toString(),
+                              ),
+                              StatCard(
+                                label: 'Time range',
+                                value: summary == null
+                                    ? 'API error'
+                                    : '${summary.firstSaleTime.isEmpty ? 'Not provided' : summary.firstSaleTime} - ${summary.lastSaleTime.isEmpty ? 'Not provided' : summary.lastSaleTime}',
+                                icon: Icons.schedule_rounded,
+                                subtitle: data.summary.error?.toString(),
+                              ),
                             ],
                           ),
                         ],
@@ -108,7 +135,7 @@ class _SalesScreenState extends State<SalesScreen> {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Padding(
                     padding: EdgeInsets.only(top: 40),
-                    child: LoadingStateView(message: 'กำลังโหลดรายการขาย...'),
+                    child: LoadingStateView(message: 'Loading sales list...'),
                   );
                 }
                 if (snapshot.hasError) {
@@ -117,18 +144,22 @@ class _SalesScreenState extends State<SalesScreen> {
                     child: ErrorStateView(message: snapshot.error.toString(), onRetry: _refresh),
                   );
                 }
-                final rows = snapshot.data?.rows ?? const <SalesRecord>[];
-                final topProducts = snapshot.data?.topProducts ?? const <Map<String, dynamic>>[];
+                final rowsResult = snapshot.data?.rows;
+                final topProductsResult = snapshot.data?.topProducts;
+                final rows = rowsResult?.data ?? const <SalesRecord>[];
+                final topProducts = topProductsResult?.data ?? const <Map<String, dynamic>>[];
 
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('รายการขายวันนี้', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800)),
+                    Text('Today sales list', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800)),
                     const SizedBox(height: 8),
-                    if (rows.isEmpty)
+                    if (rowsResult?.error != null)
+                      ErrorStateView(message: rowsResult!.error.toString(), onRetry: _refresh)
+                    else if (rows.isEmpty)
                       const EmptyStateView(
-                        title: 'ยังไม่มีรายการขาย',
-                        description: 'เมื่อมี invoice ใหม่จาก connector ข้อมูลจะมาแสดงที่นี่',
+                        title: 'No sales yet',
+                        description: 'When new invoices arrive from the connector, they will appear here.',
                       )
                     else
                       for (final sale in rows.take(20)) ...[
@@ -154,10 +185,12 @@ class _SalesScreenState extends State<SalesScreen> {
                     const SizedBox(height: 12),
                     Text('Top products today', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800)),
                     const SizedBox(height: 8),
-                    if (topProducts.isEmpty)
+                    if (topProductsResult?.error != null)
+                      ErrorStateView(message: topProductsResult!.error.toString(), onRetry: _refresh)
+                    else if (topProducts.isEmpty)
                       const EmptyStateView(
-                        title: 'ไม่มี top products',
-                        description: 'Connector ยังไม่ส่งข้อมูล top products วันนี้',
+                        title: 'No top products',
+                        description: 'The connector has not sent top products data for today yet.',
                       )
                     else
                       for (final row in topProducts.take(10)) ...[
@@ -189,7 +222,17 @@ class _SalesData {
     required this.topProducts,
   });
 
-  final SalesSummary summary;
-  final List<SalesRecord> rows;
-  final List<Map<String, dynamic>> topProducts;
+  final _LoadResult<SalesSummary> summary;
+  final _LoadResult<List<SalesRecord>> rows;
+  final _LoadResult<List<Map<String, dynamic>>> topProducts;
+}
+
+class _LoadResult<T> {
+  const _LoadResult({
+    this.data,
+    this.error,
+  });
+
+  final T? data;
+  final Object? error;
 }

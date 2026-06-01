@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../core/api/app_services.dart';
 import '../core/formatters.dart';
 import '../models/pos_models.dart';
+import '../l10n/app_localizations.dart';
 import '../widgets/common_widgets.dart';
 
 class PurchaseOrdersScreen extends StatefulWidget {
@@ -29,6 +30,7 @@ class _PurchaseOrdersScreenState extends State<PurchaseOrdersScreen> {
   }
 
   Future<void> _openDetail(PurchaseOrderRecord order) async {
+    final l10n = AppLocalizations.of(context);
     try {
       final data = await AppServices.api.getPurchaseOrder(order.id);
       final receiving = await AppServices.api.getPurchaseOrderReceivingStatus(order.id).catchError((_) => <String, dynamic>{});
@@ -104,16 +106,16 @@ class _PurchaseOrdersScreenState extends State<PurchaseOrdersScreen> {
                               context: context,
                               builder: (dialogContext) {
                                 return AlertDialog(
-                                  title: const Text('ยืนยันการรับสินค้า'),
-                                  content: Text('จะบันทึกรับสินค้าทั้งหมดสำหรับ ${order.poNo}'),
+                                  title: Text(l10n.confirm),
+                                  content: Text('Receive all items for ${order.poNo}?'),
                                   actions: [
                                     TextButton(
                                       onPressed: () => Navigator.of(dialogContext).pop(false),
-                                      child: const Text('ยกเลิก'),
+                                      child: Text(l10n.cancel),
                                     ),
                                     FilledButton(
                                       onPressed: () => Navigator.of(dialogContext).pop(true),
-                                      child: const Text('ยืนยัน'),
+                                      child: Text(l10n.confirm),
                                     ),
                                   ],
                                 );
@@ -125,7 +127,7 @@ class _PurchaseOrdersScreenState extends State<PurchaseOrdersScreen> {
                               if (!context.mounted) return;
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(
-                                  content: Text('บันทึกรับสินค้าเรียบร้อย: ${response['receipt']?['receipt_no'] ?? response['receipt']?['receiptNo'] ?? 'สำเร็จ'}'),
+                                  content: Text('Goods receipt saved: ${response['receipt']?['receipt_no'] ?? response['receipt']?['receiptNo'] ?? 'OK'}'),
                                 ),
                               );
                               await _refresh();
@@ -137,7 +139,7 @@ class _PurchaseOrdersScreenState extends State<PurchaseOrdersScreen> {
                             }
                           },
                     icon: const Icon(Icons.inventory_2_rounded),
-                    label: const Text('รับสินค้าทั้งหมด'),
+                    label: Text(l10n.confirm),
                   ),
                 ],
               );
@@ -153,8 +155,9 @@ class _PurchaseOrdersScreenState extends State<PurchaseOrdersScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return AppFrame(
-      title: 'Purchase Orders',
+      title: l10n.purchaseOrders,
       actions: [IconButton(onPressed: _refresh, icon: const Icon(Icons.refresh_rounded))],
       child: RefreshIndicator(
         onRefresh: _refresh,
@@ -163,17 +166,17 @@ class _PurchaseOrdersScreenState extends State<PurchaseOrdersScreen> {
           physics: const AlwaysScrollableScrollPhysics(),
           children: [
             SectionCard(
-              title: 'PO list',
-              subtitle: 'อ่านจาก /purchase-orders และ /purchase-orders/:id',
+              title: 'Purchase order list',
+              subtitle: 'Loaded from /purchase-orders and /purchase-orders/:id',
               child: Column(
                 children: [
-                  InfoPill(label: AppServices.config.demoReadOnly ? 'Read-only mode' : 'Write enabled'),
+                  InfoPill(label: AppServices.config.demoReadOnly ? l10n.readOnly : l10n.writeEnabled),
                   const SizedBox(height: 12),
                   FutureBuilder<List<PurchaseOrderRecord>>(
                     future: _future,
                     builder: (context, snapshot) {
                       if (snapshot.connectionState == ConnectionState.waiting) {
-                        return const LoadingStateView(message: 'กำลังโหลด purchase orders...');
+                        return LoadingStateView(message: l10n.loadingPurchaseOrders);
                       }
                       if (snapshot.hasError) {
                         return ErrorStateView(message: snapshot.error.toString(), onRetry: _refresh);
@@ -181,8 +184,8 @@ class _PurchaseOrdersScreenState extends State<PurchaseOrdersScreen> {
                       final rows = snapshot.data ?? const <PurchaseOrderRecord>[];
                       if (rows.isEmpty) {
                         return const EmptyStateView(
-                          title: 'ไม่มี PO',
-                          description: 'API ไม่ส่งรายการ PO หรือยังไม่มีข้อมูล',
+                          title: 'No purchase orders',
+                          description: 'The API did not return any PO rows yet.',
                         );
                       }
                       return Column(

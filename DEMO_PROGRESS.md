@@ -1,20 +1,39 @@
 # Demo Progress
 
-- Timestamp: 2026-06-01 17:23 ICT
+- Timestamp: 2026-06-01 18:16 +07
 - Flutter project path: `/home/april/projects/openclaw-pos-bigluna`
-- OpenClaw web/backend inspected:
+- OpenClaw reference paths inspected:
   - `/home/april/pos-dashboard`
-  - `/home/april/dbd-search-package-20260523/backend/pos-dashboard-public.index.js`
+  - `/home/april/projects/openclaw-pos-platform`
+
+## What was fixed
+
+- Dashboard and System Status were showing misleading values because some model parsing and UI fallbacks were turning missing or failed API data into `0`, `-`, or `unknown`.
+- `ConnectorHealth.mode` now falls back to `write-enabled` or `read-only` instead of `unknown`.
+- `DatabaseInfo` no longer invents a database name when the API does not provide one.
+- Sales screen no longer defaults summary totals to zero on request failure.
+- Missing API data is now displayed as `Not provided by API` or `API error` instead of fake values.
+- Mobile layouts were tightened to remove overflow on Dashboard, System Status, Inventory, Vendors, and Sales by increasing card height and improving text wrapping.
+- Scan screen layout was fixed so the barcode scanner card no longer has malformed nesting.
+- The app language now defaults to English and can be switched between English and Vietnamese from Settings.
+- The demo mode banner now reflects write-enabled mode in English and Vietnamese.
 
 ## Completed
 
-- Created a standalone Flutter demo app named `openclaw_pos_bigluna`
-- Set app display name to `Big Luna POS`
+- Created the standalone Flutter demo app `openclaw_pos_bigluna`
+- Kept full-function demo mode enabled with `DEMO_READ_ONLY=false`
 - Added `.env.example` and local `.env` loading via `flutter_dotenv`
-- Added optional `DEMO_READ_ONLY` safety gate for future safety mode
 - Added Dio API client with optional bearer token support
-- Added write-enabled demo helpers for stock adjustment, expiry, PO draft creation, PO confirmation, and goods receiving
-- Built mobile-first Thai UI for:
+- Added write-enabled demo helpers for:
+  - stock adjustment
+  - expiry lot creation
+  - purchase order draft creation
+  - purchase order confirmation
+  - goods receiving
+- Added language persistence with `shared_preferences`
+- Added a simple localization layer for English and Vietnamese
+- Added a Settings screen for locale selection
+- Built mobile-first UI for:
   - Dashboard
   - Products
   - Barcode Scan
@@ -26,8 +45,6 @@
   - Stock Adjustment
   - Expiry Lots
   - System Status
-- Added safe confirmation flow for stock adjustment, expiry lot create, PO creation, and goods receiving
-- Added `DEMO_PROGRESS.md`
 
 ## Live API endpoints connected
 
@@ -86,47 +103,29 @@
   - Created PO `PO-20260601-0001`
   - Saved goods receipt `GR-20260601-0001`
 
-## Still limited / not exposed
+## Environment
 
-- Historical sales date ranges are not exposed by the current connector
-- Vendor create/edit flows are not wired
-- Goods receiving is read-only in the demo UI
-- Android SDK installed locally at `/home/april/projects/android-sdk`
-- Android debug APK builds successfully in this environment
-- Demo APK is built with `DEMO_READ_ONLY=false`
+- `API_BASE_URL=https://openclaw.ganseeds.com`
+- `API_TOKEN=` only if the backend requires it
+- `DEMO_READ_ONLY=false` for full-function demo builds
 
-## Env setup
+## Validation
 
-- Copy `.env.example` to `.env`
-- Set `API_BASE_URL`
-- Set `API_TOKEN` only if the backend requires it
-- Set `DEMO_READ_ONLY=false` for full-function demo runs
-- Set `DEMO_READ_ONLY=true` only when you want the safety mode
-
-## Run
-
-- `cd /home/april/projects/openclaw-pos-bigluna`
-- `/home/april/projects/flutter-sdk/bin/flutter pub get`
-- `/home/april/projects/flutter-sdk/bin/flutter test`
-- `/home/april/projects/flutter-sdk/bin/flutter analyze`
-- `/home/april/projects/flutter-sdk/bin/flutter build apk --debug`
-
-## Validation results
-
+- `flutter pub get`: passed
 - `flutter analyze`: passed
 - `flutter test`: passed
 - `flutter build apk --debug`: passed
-- `flutter build web`: passed
 - Debug APK output: `build/app/outputs/flutter-apk/app-debug.apk`
+
+## Notes
+
+- Android SDK is installed at `/home/april/projects/android-sdk`
+- `JAVA_HOME` must point to `/home/april/projects/java-17` for Android builds in this shell
+- No Android device was attached when checking `adb devices`, so I could not capture a fresh on-device screenshot from this environment
+- No backup, snapshot, reset, or rollback was performed
+- No changes were made to `/home/april/pos-dashboard` or `/home/april/projects/openclaw-pos-platform`
 
 ## Git
 
-- Local git repo initialized in `/home/april/projects/openclaw-pos-bigluna`
-- Initial commit created: `46de0fb` (`Initial Big Luna POS demo app`)
-- Latest commit for this round: `162cb37` (`Enable full-function demo mode`)
-- Working tree is clean after commit
-
-## Next step
-
-- If the live backend needs auth, populate `API_TOKEN` locally and re-test the app with `DEMO_READ_ONLY=false`
-- Copy the debug APK to the demo device or install it with `adb install -r build/app/outputs/flutter-apk/app-debug.apk`
+- Local git repo is initialized in `/home/april/projects/openclaw-pos-bigluna`
+- Latest commit hash will be recorded after the final commit for this round

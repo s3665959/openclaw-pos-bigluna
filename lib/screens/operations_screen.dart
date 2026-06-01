@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../core/api/app_services.dart';
 import '../models/pos_models.dart';
+import '../l10n/app_localizations.dart';
 import '../widgets/common_widgets.dart';
 
 enum OperationsSection { goodsReceiving, stockAdjustment, expiryLots }
@@ -107,11 +108,11 @@ class _OperationsScreenState extends State<OperationsScreen> {
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: const Text('ยืนยันการปรับสต็อก'),
-          content: Text('จะส่ง ${_direction == 'increase' ? 'เพิ่ม' : 'ลด'} $qty หน่วย สำหรับ $stockId'),
+          title: const Text('Confirm stock adjustment'),
+          content: Text('Send ${_direction == 'increase' ? 'increase' : 'decrease'} $qty units for $stockId?'),
           actions: [
-            TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('ยกเลิก')),
-            FilledButton(onPressed: () => Navigator.of(context).pop(true), child: const Text('ยืนยัน')),
+            TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('Cancel')),
+            FilledButton(onPressed: () => Navigator.of(context).pop(true), child: const Text('Confirm')),
           ],
         );
       },
@@ -151,7 +152,7 @@ class _OperationsScreenState extends State<OperationsScreen> {
     if (stockId.isEmpty) return;
     if (_productNameController.text.trim().isEmpty || _batchNoController.text.trim().isEmpty || _expiryDateController.text.trim().isEmpty) {
       setState(() {
-        _expiryMessage = 'กรอก stock id / product / batch / expiry ให้ครบ';
+        _expiryMessage = 'Fill stock id, product, batch, and expiry date.';
       });
       return;
     }
@@ -159,11 +160,11 @@ class _OperationsScreenState extends State<OperationsScreen> {
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: const Text('ยืนยันการเพิ่ม expiry lot'),
-          content: Text('จะบันทึก lot สำหรับ $stockId'),
+          title: const Text('Confirm expiry lot'),
+          content: Text('Save an expiry lot for $stockId?'),
           actions: [
-            TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('ยกเลิก')),
-            FilledButton(onPressed: () => Navigator.of(context).pop(true), child: const Text('ยืนยัน')),
+            TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('Cancel')),
+            FilledButton(onPressed: () => Navigator.of(context).pop(true), child: const Text('Confirm')),
           ],
         );
       },
@@ -201,11 +202,12 @@ class _OperationsScreenState extends State<OperationsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return AppFrame(
       title: switch (widget.section) {
-        OperationsSection.goodsReceiving => 'Goods Receiving',
-        OperationsSection.stockAdjustment => 'Stock Adjustment',
-        OperationsSection.expiryLots => 'Expiry Lots',
+        OperationsSection.goodsReceiving => l10n.goodsReceiving,
+        OperationsSection.stockAdjustment => l10n.stockAdjustment,
+        OperationsSection.expiryLots => l10n.expiryLots,
       },
       actions: [IconButton(onPressed: _refresh, icon: const Icon(Icons.refresh_rounded))],
       child: RefreshIndicator(
@@ -216,8 +218,8 @@ class _OperationsScreenState extends State<OperationsScreen> {
           children: [
             if (widget.section == OperationsSection.stockAdjustment)
               SectionCard(
-                title: 'ปรับสต็อก',
-                subtitle: 'ผ่าน /stock/direct-adjust เท่านั้น',
+                title: 'Stock adjustment',
+                subtitle: 'Uses /stock/direct-adjust only',
                 child: Column(
                   children: [
                     TextField(
@@ -227,7 +229,7 @@ class _OperationsScreenState extends State<OperationsScreen> {
                     const SizedBox(height: 12),
                     TextField(
                       controller: _productNameController,
-                      decoration: const InputDecoration(labelText: 'ชื่อสินค้า', prefixIcon: Icon(Icons.label_rounded)),
+                      decoration: const InputDecoration(labelText: 'Product name', prefixIcon: Icon(Icons.label_rounded)),
                     ),
                     const SizedBox(height: 12),
                     Row(
@@ -235,10 +237,10 @@ class _OperationsScreenState extends State<OperationsScreen> {
                         Expanded(
                           child: DropdownButtonFormField<String>(
                             initialValue: _direction,
-                            decoration: const InputDecoration(labelText: 'ทิศทาง'),
+                            decoration: const InputDecoration(labelText: 'Direction'),
                             items: const [
-                              DropdownMenuItem(value: 'increase', child: Text('เพิ่ม stock')),
-                              DropdownMenuItem(value: 'decrease', child: Text('ลด stock')),
+                              DropdownMenuItem(value: 'increase', child: Text('Increase stock')),
+                              DropdownMenuItem(value: 'decrease', child: Text('Decrease stock')),
                             ],
                             onChanged: (value) => setState(() => _direction = value ?? 'increase'),
                           ),
@@ -248,7 +250,7 @@ class _OperationsScreenState extends State<OperationsScreen> {
                           child: TextField(
                             controller: _qtyController,
                             keyboardType: TextInputType.number,
-                            decoration: const InputDecoration(labelText: 'จำนวน', prefixIcon: Icon(Icons.numbers_rounded)),
+                            decoration: const InputDecoration(labelText: 'Quantity', prefixIcon: Icon(Icons.numbers_rounded)),
                           ),
                         ),
                       ],
@@ -267,12 +269,12 @@ class _OperationsScreenState extends State<OperationsScreen> {
                     FilledButton.icon(
                       onPressed: _busy || AppServices.config.demoReadOnly ? null : _submitAdjustment,
                       icon: const Icon(Icons.save_rounded),
-                      label: const Text('ส่งคำขอปรับสต็อก'),
+                      label: const Text('Submit adjustment'),
                     ),
                     if (AppServices.config.demoReadOnly)
                       const Padding(
                         padding: EdgeInsets.only(top: 8),
-                        child: Text('โหมด Demo: ปิดการบันทึกข้อมูลจริง'),
+                        child: Text('Demo Mode: Real data changes are disabled'),
                       ),
                     if (_qtyActionMessage.isNotEmpty) ...[
                       const SizedBox(height: 12),
@@ -284,7 +286,7 @@ class _OperationsScreenState extends State<OperationsScreen> {
             if (widget.section == OperationsSection.expiryLots)
               SectionCard(
                 title: 'Expiry lots',
-                subtitle: 'อ่าน summary และสร้าง lot ผ่าน /expiry',
+                subtitle: 'Load summary and create lots via /expiry',
                 child: Column(
                   children: [
                     TextField(
@@ -333,7 +335,7 @@ class _OperationsScreenState extends State<OperationsScreen> {
                           child: FilledButton.icon(
                             onPressed: _busy || AppServices.config.demoReadOnly ? null : _submitExpiryLot,
                             icon: const Icon(Icons.save_rounded),
-                            label: const Text('บันทึก lot'),
+                            label: const Text('Save lot'),
                           ),
                         ),
                       ],
@@ -341,7 +343,7 @@ class _OperationsScreenState extends State<OperationsScreen> {
                     if (AppServices.config.demoReadOnly)
                       const Padding(
                         padding: EdgeInsets.only(top: 8),
-                        child: Text('โหมด Demo: ปิดการบันทึกข้อมูลจริง'),
+                        child: Text('Demo Mode: Real data changes are disabled'),
                       ),
                     if (_expiryMessage.isNotEmpty) ...[
                       const SizedBox(height: 12),
@@ -356,7 +358,7 @@ class _OperationsScreenState extends State<OperationsScreen> {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Padding(
                     padding: EdgeInsets.only(top: 40),
-                    child: LoadingStateView(message: 'กำลังโหลดข้อมูล...'),
+                    child: LoadingStateView(message: 'Loading data...'),
                   );
                 }
                 if (snapshot.hasError) {
@@ -374,11 +376,11 @@ class _OperationsScreenState extends State<OperationsScreen> {
                         const SizedBox(height: 16),
                         SectionCard(
                           title: 'Goods receiving list',
-                          subtitle: 'อ่านจาก /goods-receiving',
+                          subtitle: 'Loaded from /goods-receiving',
                           child: rows.isEmpty
                               ? const EmptyStateView(
-                                  title: 'ไม่มีใบรับสินค้า',
-                                  description: 'API ยังไม่ส่ง receipt list หรือยังไม่มีข้อมูล',
+                                  title: 'No goods receipts',
+                                  description: 'The API did not return any receipt rows yet.',
                                 )
                               : Column(
                                   children: [
@@ -399,11 +401,11 @@ class _OperationsScreenState extends State<OperationsScreen> {
                         const SizedBox(height: 16),
                         SectionCard(
                           title: 'Recent adjustments',
-                          subtitle: 'อ่านจาก /stock/recent-adjustments',
+                          subtitle: 'Loaded from /stock/recent-adjustments',
                           child: rows.isEmpty
                               ? const EmptyStateView(
-                                  title: 'ไม่มี adjustment ล่าสุด',
-                                  description: 'เมื่อมีการปรับ stock ผ่าน connector รายการจะมาแสดงที่นี่',
+                                  title: 'No recent adjustments',
+                                  description: 'When stock changes are posted by the connector, they will appear here.',
                                 )
                               : Column(
                                   children: [
@@ -427,7 +429,7 @@ class _OperationsScreenState extends State<OperationsScreen> {
                         const SizedBox(height: 16),
                         SectionCard(
                           title: 'Expiry summary',
-                          subtitle: stockId.isEmpty ? 'เลือก stock id เพื่อดู lot' : 'stock: $stockId',
+                          subtitle: stockId.isEmpty ? 'Choose a stock ID to view lots' : 'Stock: $stockId',
                           child: summary.isEmpty
                               ? const Text('No expiry summary rows returned by API')
                               : Column(
@@ -443,9 +445,9 @@ class _OperationsScreenState extends State<OperationsScreen> {
                         const SizedBox(height: 12),
                         SectionCard(
                           title: 'Lots',
-                          subtitle: 'อ่านจาก /expiry?stock_id=... ',
+                          subtitle: 'Loaded from /expiry?stock_id=...',
                           child: lots.isEmpty
-                              ? const Text('ไม่มี lot สำหรับ stock นี้')
+                              ? const Text('No lots for this stock')
                               : Column(
                                   children: [
                                     for (final row in lots.take(15))

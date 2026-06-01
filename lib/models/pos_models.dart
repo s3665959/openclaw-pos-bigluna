@@ -18,11 +18,13 @@ class ConnectorHealth {
   final String? edition;
 
   factory ConnectorHealth.fromJson(Map<String, dynamic> json, {String? databaseName, String? edition}) {
+    final mode = _text(json['mode'] ?? json['Mode']);
+    final writeMode = _bool(json['writeMode'] ?? json['write_mode'] ?? json['write_mode_enabled'], fallback: true);
     return ConnectorHealth(
       ok: _bool(json['ok'], fallback: false),
       service: _text(json['service'], fallback: 'pos-connector'),
-      mode: _text(json['mode'], fallback: 'unknown'),
-      writeMode: _bool(json['writeMode'], fallback: true),
+      mode: mode.isNotEmpty ? mode : (writeMode ? 'write-enabled' : 'read-only'),
+      writeMode: writeMode,
       message: _text(json['message']).isEmpty ? null : _text(json['message']),
       databaseName: databaseName,
       edition: edition,
@@ -41,7 +43,7 @@ class DatabaseInfo {
 
   factory DatabaseInfo.fromJson(Map<String, dynamic> json) {
     return DatabaseInfo(
-      databaseName: _text(json['database_name'], fallback: 'MainDB'),
+      databaseName: _text(json['database_name'] ?? json['databaseName'] ?? json['db_name'] ?? json['name']),
       edition: _text(json['edition']).isEmpty ? null : _text(json['edition']),
     );
   }

@@ -603,7 +603,7 @@ class OpenClawApi {
 
   void _ensureWriteEnabled() {
     if (isDemoReadOnly) {
-      throw ApiException('โหมด Demo: ปิดการบันทึกข้อมูลจริง');
+      throw ApiException('Demo Mode: Real data changes are disabled');
     }
   }
 }

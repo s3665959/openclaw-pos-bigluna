@@ -99,29 +99,29 @@ class _ProductsScreenState extends State<ProductsScreen> {
                   ),
                   const SizedBox(height: 16),
                   SectionCard(
-                    title: 'รายละเอียดสินค้า',
+                    title: 'Product details',
                     child: Column(
                       children: [
                         KeyValueRow(label: 'Stock ID', value: detail.id),
                         KeyValueRow(label: 'Barcode', value: detail.barcode),
-                        KeyValueRow(label: 'ราคา', value: formatMoney(detail.price)),
-                        KeyValueRow(label: 'ต้นทุน', value: detail.cost == null ? '-' : formatMoney(detail.cost!)),
-                        KeyValueRow(label: 'คงเหลือ', value: formatQuantity(detail.stockQty)),
-                        KeyValueRow(label: 'จุดสั่งซื้อ', value: detail.reorderLevel == null ? '-' : formatQuantity(detail.reorderLevel!)),
+                        KeyValueRow(label: 'Price', value: formatMoney(detail.price)),
+                        KeyValueRow(label: 'Cost', value: detail.cost == null ? '-' : formatMoney(detail.cost!)),
+                        KeyValueRow(label: 'On hand', value: formatQuantity(detail.stockQty)),
+                        KeyValueRow(label: 'Reorder point', value: detail.reorderLevel == null ? '-' : formatQuantity(detail.reorderLevel!)),
                       ],
                     ),
                   ),
                   const SizedBox(height: 12),
                   SectionCard(
                     title: 'Vendor link',
-                    subtitle: 'ข้อมูลจาก /product-suppliers',
+                    subtitle: 'Data from /product-suppliers',
                     child: Column(
                       children: [
                         KeyValueRow(label: 'Supplier rows', value: '${suppliers.length}'),
                         if (suppliers.isEmpty)
                           const Padding(
                             padding: EdgeInsets.only(top: 8),
-                            child: Text('ไม่มีข้อมูล supplier link จาก API'),
+                            child: Text('No supplier link rows from API'),
                           ),
                         for (final supplier in suppliers.take(3))
                           KeyValueRow(
@@ -150,7 +150,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
                             );
                           },
                     icon: const Icon(Icons.swap_vert_rounded),
-                    label: const Text('ปรับสต็อก'),
+                    label: const Text('Adjust stock'),
                   ),
                   const SizedBox(height: 8),
                   FilledButton.tonalIcon(
@@ -161,16 +161,16 @@ class _ProductsScreenState extends State<ProductsScreen> {
                               context: context,
                               builder: (dialogContext) {
                                 return AlertDialog(
-                                  title: const Text('ยืนยันการสร้าง PO demo'),
-                                  content: Text('จะสร้างใบสั่งซื้อสำหรับ ${detail.name} จากข้อมูล vendor ที่ backend มีอยู่จริง'),
+                                  title: const Text('Confirm demo PO creation'),
+                                  content: Text('Create a purchase order for ${detail.name} using the live vendor mapping from the backend?'),
                                   actions: [
                                     TextButton(
                                       onPressed: () => Navigator.of(dialogContext).pop(false),
-                                      child: const Text('ยกเลิก'),
+                                      child: const Text('Cancel'),
                                     ),
                                     FilledButton(
                                       onPressed: () => Navigator.of(dialogContext).pop(true),
-                                      child: const Text('ยืนยัน'),
+                                      child: const Text('Confirm'),
                                     ),
                                   ],
                                 );
@@ -186,7 +186,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
                               if (!context.mounted) return;
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(
-                                  content: Text(poNos.isEmpty ? 'สร้าง PO demo สำเร็จ' : 'สร้าง PO demo สำเร็จ: ${poNos.join(', ')}'),
+                                  content: Text(poNos.isEmpty ? 'Demo PO created successfully' : 'Demo PO created successfully: ${poNos.join(', ')}'),
                                 ),
                               );
                             } catch (error) {
@@ -201,7 +201,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
                             }
                           },
                     icon: const Icon(Icons.local_shipping_rounded),
-                    label: const Text('สร้าง PO demo'),
+                    label: const Text('Create demo PO'),
                   ),
                 ],
               );
@@ -234,7 +234,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
       title: 'Products',
       actions: [
         IconButton(
-          tooltip: 'รีเฟรช',
+          tooltip: 'Refresh',
           onPressed: _refresh,
           icon: const Icon(Icons.refresh_rounded),
         ),
@@ -247,15 +247,15 @@ class _ProductsScreenState extends State<ProductsScreen> {
           padding: const EdgeInsets.all(16),
           children: [
             SectionCard(
-              title: 'ค้นหาสินค้า',
-              subtitle: 'รองรับชื่อ / SKU / barcode ตาม API จริง',
+              title: 'Search products',
+              subtitle: 'Supports name / SKU / barcode from the live API',
               child: Column(
                 children: [
                   TextField(
                     controller: _searchController,
                     decoration: InputDecoration(
-                      labelText: 'ค้นหา',
-                      hintText: 'ชื่อสินค้า, SKU หรือ barcode',
+                      labelText: 'Search',
+                      hintText: 'Product name, SKU, or barcode',
                       prefixIcon: const Icon(Icons.search_rounded),
                       suffixIcon: _searchController.text.isEmpty
                           ? null
@@ -275,9 +275,9 @@ class _ProductsScreenState extends State<ProductsScreen> {
                       Expanded(
                         child: DropdownButtonFormField<String?>(
                           initialValue: _selectedStockStatus,
-                          decoration: const InputDecoration(labelText: 'สถานะ stock'),
+                          decoration: const InputDecoration(labelText: 'Stock status'),
                           items: const [
-                            DropdownMenuItem(value: null, child: Text('ทั้งหมด')),
+                            DropdownMenuItem(value: null, child: Text('All')),
                             DropdownMenuItem(value: 'in-stock', child: Text('In stock')),
                             DropdownMenuItem(value: 'low-stock', child: Text('Low stock')),
                             DropdownMenuItem(value: 'out-of-stock', child: Text('Out of stock')),
@@ -297,7 +297,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
                         child: OutlinedButton.icon(
                           onPressed: _applySearch,
                           icon: const Icon(Icons.search_rounded),
-                          label: const Text('ค้นหา'),
+                          label: const Text('Search'),
                         ),
                       ),
                     ],
@@ -305,7 +305,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
                   if (AppServices.config.demoReadOnly)
                     const Padding(
                       padding: EdgeInsets.only(top: 8),
-                      child: Text('โหมด Demo: ปิดการบันทึกข้อมูลจริง'),
+                      child: Text('Demo Mode: Real data changes are disabled'),
                     ),
                 ],
               ),
@@ -317,7 +317,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Padding(
                     padding: EdgeInsets.only(top: 80),
-                    child: LoadingStateView(message: 'กำลังดึงรายการสินค้า...'),
+                    child: LoadingStateView(message: 'Loading products...'),
                   );
                 }
                 if (snapshot.hasError) {
@@ -333,8 +333,8 @@ class _ProductsScreenState extends State<ProductsScreen> {
                   return const Padding(
                     padding: EdgeInsets.only(top: 60),
                     child: EmptyStateView(
-                      title: 'ไม่พบสินค้า',
-                      description: 'ลองเปลี่ยนคำค้นหรือรีเฟรชข้อมูลอีกครั้ง',
+                      title: 'No products found',
+                      description: 'Try a different search term or refresh the data.',
                     ),
                   );
                 }
@@ -344,7 +344,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
                     Align(
                       alignment: Alignment.centerLeft,
                       child: Text(
-                        'พบ ${page?.total ?? rows.length} รายการ',
+                        '${page?.total ?? rows.length} items found',
                         style: Theme.of(context).textTheme.labelLarge,
                       ),
                     ),
@@ -377,7 +377,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
                       ),
                       const SizedBox(height: 8),
                     ],
-                    if (_detailLoading) const Padding(padding: EdgeInsets.only(top: 8), child: LoadingStateView(message: 'กำลังดึงรายละเอียด...')),
+                    if (_detailLoading) const Padding(padding: EdgeInsets.only(top: 8), child: LoadingStateView(message: 'Loading details...')),
                     if (_detailError != null)
                       Padding(
                         padding: const EdgeInsets.only(top: 8),

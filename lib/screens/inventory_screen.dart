@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../core/api/app_services.dart';
 import '../core/formatters.dart';
 import '../models/pos_models.dart';
+import '../l10n/app_localizations.dart';
 import '../widgets/common_widgets.dart';
 import 'operations_screen.dart';
 
@@ -61,10 +62,11 @@ class _InventoryScreenState extends State<InventoryScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return AppFrame(
-      title: 'Inventory',
+      title: l10n.inventory,
       actions: [
-        IconButton(onPressed: _refresh, icon: const Icon(Icons.refresh_rounded)),
+        IconButton(tooltip: l10n.refresh, onPressed: _refresh, icon: const Icon(Icons.refresh_rounded)),
       ],
       child: RefreshIndicator(
         onRefresh: _refresh,
@@ -73,14 +75,14 @@ class _InventoryScreenState extends State<InventoryScreen> {
           physics: const AlwaysScrollableScrollPhysics(),
           children: [
             SectionCard(
-              title: 'ภาพรวม stock',
-              subtitle: 'ดึงจาก /stock/summary และ /products/list',
+              title: 'Stock overview',
+              subtitle: 'Pulled from /stock/summary and /products/list',
               child: Column(
                 children: [
                   TextField(
                     controller: _searchController,
                     decoration: const InputDecoration(
-                      labelText: 'ค้นหาสินค้าใน inventory',
+                      labelText: 'Search inventory products',
                       prefixIcon: Icon(Icons.search_rounded),
                     ),
                     onSubmitted: (value) async {
@@ -94,9 +96,9 @@ class _InventoryScreenState extends State<InventoryScreen> {
                   const SizedBox(height: 12),
                   DropdownButtonFormField<String>(
                     initialValue: _filter,
-                    decoration: const InputDecoration(labelText: 'ตัวกรอง'),
+                    decoration: const InputDecoration(labelText: 'Filter'),
                     items: const [
-                      DropdownMenuItem(value: 'all', child: Text('ทั้งหมด')),
+                      DropdownMenuItem(value: 'all', child: Text('All')),
                       DropdownMenuItem(value: 'healthy', child: Text('Healthy stock')),
                       DropdownMenuItem(value: 'low-stock', child: Text('Low stock')),
                       DropdownMenuItem(value: 'out-of-stock', child: Text('Out of stock')),
@@ -120,7 +122,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Padding(
                     padding: EdgeInsets.only(top: 80),
-                    child: LoadingStateView(message: 'กำลังโหลด inventory...'),
+                    child: LoadingStateView(message: 'Loading inventory...'),
                   );
                 }
                 if (snapshot.hasError) {
@@ -146,7 +148,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
                       physics: const NeverScrollableScrollPhysics(),
                       shrinkWrap: true,
                       crossAxisCount: MediaQuery.of(context).size.width > 700 ? 4 : 2,
-                      childAspectRatio: 1.5,
+                      mainAxisExtent: 132,
                       mainAxisSpacing: 12,
                       crossAxisSpacing: 12,
                       children: [
@@ -159,15 +161,15 @@ class _InventoryScreenState extends State<InventoryScreen> {
                     const SizedBox(height: 12),
                     Align(
                       alignment: Alignment.centerLeft,
-                      child: Text('${rows.length} รายการที่ตรงกับตัวกรอง', style: Theme.of(context).textTheme.labelLarge),
+                      child: Text('${rows.length} items match the current filter', style: Theme.of(context).textTheme.labelLarge),
                     ),
                     const SizedBox(height: 8),
                     if (rows.isEmpty)
                       const Padding(
                         padding: EdgeInsets.only(top: 40),
                         child: EmptyStateView(
-                          title: 'ไม่มีรายการใน filter นี้',
-                          description: 'ลองเปลี่ยนตัวกรองหรือค้นหาใหม่',
+                          title: 'No items in this filter',
+                          description: 'Try a different filter or a new search.',
                         ),
                       )
                     else
@@ -207,7 +209,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
                     if (AppServices.config.demoReadOnly)
                       const Padding(
                         padding: EdgeInsets.only(top: 8),
-                        child: Text('โหมด Demo: ปิดการบันทึกข้อมูลจริง'),
+                        child: Text('Demo Mode: Real data changes are disabled'),
                       ),
                   ],
                 );

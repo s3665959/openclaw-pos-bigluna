@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../core/api/app_services.dart';
+import '../l10n/app_localizations.dart';
 
 class AppFrame extends StatelessWidget {
   const AppFrame({
@@ -19,6 +20,7 @@ class AppFrame extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context);
     return Scaffold(
       floatingActionButton: floatingActionButton,
       appBar: AppBar(
@@ -66,8 +68,8 @@ class AppFrame extends StatelessWidget {
                     Expanded(
                       child: Text(
                         AppServices.config.demoReadOnly
-                            ? 'โหมด Demo: ปิดการบันทึกข้อมูลจริง'
-                            : 'POS Test Environment — เปิดใช้งานการบันทึกข้อมูลจริง',
+                            ? l10n.demoModeDisabledBanner
+                            : l10n.demoModeEnabledBanner,
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                               fontWeight: FontWeight.w700,
                               color: AppServices.config.demoReadOnly
@@ -200,7 +202,13 @@ class InfoPill extends StatelessWidget {
         borderRadius: BorderRadius.circular(999),
         border: Border.all(color: (color ?? theme.colorScheme.outlineVariant).withValues(alpha: 0.4)),
       ),
-      child: Text(label, style: theme.textTheme.labelMedium),
+      child: Text(
+        label,
+        maxLines: 2,
+        overflow: TextOverflow.ellipsis,
+        softWrap: true,
+        style: theme.textTheme.labelMedium,
+      ),
     );
   }
 }
@@ -296,6 +304,7 @@ class ErrorStateView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context);
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(24),
@@ -304,12 +313,12 @@ class ErrorStateView extends StatelessWidget {
           children: [
             Icon(Icons.cloud_off_rounded, size: 56, color: theme.colorScheme.error),
             const SizedBox(height: 16),
-            Text('เชื่อมต่อไม่สำเร็จ', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
+            Text(l10n.connectionFailed, style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
             const SizedBox(height: 8),
             Text(message, textAlign: TextAlign.center, style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
             if (onRetry != null) ...[
               const SizedBox(height: 16),
-              FilledButton(onPressed: onRetry, child: const Text('ลองใหม่')),
+              FilledButton(onPressed: onRetry, child: Text(l10n.retry)),
             ],
           ],
         ),
@@ -321,7 +330,7 @@ class ErrorStateView extends StatelessWidget {
 class LoadingStateView extends StatelessWidget {
   const LoadingStateView({
     super.key,
-    this.message = 'กำลังโหลดข้อมูล...',
+    this.message = 'Loading data...',
   });
 
   final String message;
@@ -329,13 +338,14 @@ class LoadingStateView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context);
     return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           const CircularProgressIndicator(),
           const SizedBox(height: 16),
-          Text(message, style: theme.textTheme.bodyMedium),
+          Text(message.isEmpty ? l10n.loading : message, style: theme.textTheme.bodyMedium),
         ],
       ),
     );
@@ -362,9 +372,10 @@ class StatCard extends StatelessWidget {
     return Card(
       elevation: 0,
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(14),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
           children: [
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -384,9 +395,22 @@ class StatCard extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(label, style: theme.textTheme.labelLarge?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
+                      Text(
+                        label,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.labelLarge?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                      ),
                       const SizedBox(height: 6),
-                      Text(value, style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800)),
+                      FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          value,
+                          maxLines: 2,
+                          style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800),
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -394,7 +418,12 @@ class StatCard extends StatelessWidget {
             ),
             if (subtitle != null) ...[
               const SizedBox(height: 10),
-              Text(subtitle!, style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
+              Text(
+                subtitle!,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+              ),
             ],
           ],
         ),
