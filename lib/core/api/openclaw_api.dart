@@ -162,7 +162,7 @@ class OpenClawApi {
     final rows = await _getMap('/products/list', query: {
       'page': page,
       'limit': limit,
-      if (q != null && q.trim().isNotEmpty) 'q': q.trim(),
+      if (q != null && q.trim().isNotEmpty) 'q': _cleanProductSearchTerm(q),
       if (category != null && category.trim().isNotEmpty) 'category': category.trim(),
       if (vendor != null && vendor.trim().isNotEmpty) 'vendor': vendor.trim(),
       if (stockStatus != null && stockStatus.trim().isNotEmpty) 'stock_status': stockStatus.trim(),
@@ -171,7 +171,7 @@ class OpenClawApi {
   }
 
   Future<List<ProductRecord>> searchProducts(String query, {int limit = 20}) async {
-    final cleanQuery = query.trim();
+    final cleanQuery = _cleanProductSearchTerm(query);
     if (cleanQuery.isEmpty) {
       return const <ProductRecord>[];
     }
@@ -216,7 +216,10 @@ class OpenClawApi {
   Future<Map<String, int>> getStockSummary() async {
     final json = await _getMap('/stock/summary');
     final rows = (json['rows'] as List<dynamic>? ?? const <dynamic>[]);
-    final first = rows.isNotEmpty && rows.first is Map ? Map<String, dynamic>.from(rows.first as Map) : const <String, dynamic>{};
+    if (rows.isEmpty || rows.first is! Map) {
+      throw ApiException('Stock summary is not available from the connector');
+    }
+    final first = Map<String, dynamic>.from(rows.first as Map);
     return {
       'totalProducts': _intValue(first['total_products'] ?? first['totalProducts'], fallback: 0),
       'lowStockCount': _intValue(first['low_stock_count'] ?? first['lowStockCount'], fallback: 0),
@@ -234,7 +237,7 @@ class OpenClawApi {
       final first = Map<String, dynamic>.from(rows.first as Map);
       return _intValue(first['total_products'], fallback: 0);
     }
-    return 0;
+    throw ApiException('Product count is not available from the connector');
   }
 
   Future<List<SalesRecord>> getTodaySales() async {
@@ -245,7 +248,10 @@ class OpenClawApi {
   Future<SalesSummary> getTodaySalesSummary() async {
     final json = await _getMap('/sales/summary/today');
     final rows = json['rows'] as List<dynamic>? ?? const <dynamic>[];
-    final first = rows.isNotEmpty && rows.first is Map ? Map<String, dynamic>.from(rows.first as Map) : const <String, dynamic>{};
+    if (rows.isEmpty || rows.first is! Map) {
+      throw ApiException('Today sales summary is not available from the connector');
+    }
+    final first = Map<String, dynamic>.from(rows.first as Map);
     return SalesSummary.fromJson(first);
   }
 
@@ -605,5 +611,16 @@ class OpenClawApi {
     if (isDemoReadOnly) {
       throw ApiException('Demo Mode: Real data changes are disabled');
     }
+  }
+
+  static String _cleanProductSearchTerm(String query) {
+    return query
+        .replaceAll(RegExp(r"\b(show|display|list|find|search|look up|lookup|look for|give me|tell me|please|me|do we have|do we have any|is there|are there|what are|what is|what(?:'s)?|check|show me)\b", caseSensitive: false), ' ')
+        .replaceAll(RegExp(r'\b(all|the|a|an|some|any|of|for|containing|containing the)\b', caseSensitive: false), ' ')
+        .replaceAll(RegExp(r'\b(products?|items?|product)\b', caseSensitive: false), ' ')
+        .replaceAll(RegExp(r'\b(price|stock|quantity|qty|details|info|information)\b', caseSensitive: false), ' ')
+        .replaceAll(RegExp(r'[?!.:,]+'), ' ')
+        .replaceAll(RegExp(r'\s+'), ' ')
+        .trim();
   }
 }

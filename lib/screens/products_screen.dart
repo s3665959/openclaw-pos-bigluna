@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../core/api/app_services.dart';
@@ -17,6 +19,8 @@ class _ProductsScreenState extends State<ProductsScreen> {
   final _searchController = TextEditingController();
   final _scrollController = ScrollController();
   late Future<ProductListPage> _future;
+  Timer? _searchDebounce;
+  String _searchInput = '';
   String _query = '';
   String? _selectedCategory;
   String? _selectedVendor;
@@ -31,8 +35,8 @@ class _ProductsScreenState extends State<ProductsScreen> {
     _future = _load();
   }
 
-  Future<ProductListPage> _load() {
-    return AppServices.api.listProducts(
+  Future<ProductListPage> _load() async {
+    final page = await AppServices.api.listProducts(
       page: 1,
       limit: 100,
       q: _query,
@@ -40,6 +44,12 @@ class _ProductsScreenState extends State<ProductsScreen> {
       vendor: _selectedVendor,
       stockStatus: _selectedStockStatus,
     );
+    if (page.rows.isNotEmpty || _query.isEmpty) {
+      return page;
+    }
+    final fallback = await AppServices.api.searchProducts(_query, limit: 100);
+    if (fallback.isEmpty) return page;
+    return ProductListPage(page: 1, limit: fallback.length, total: fallback.length, totalPages: 1, rows: fallback);
   }
 
   Future<void> _refresh() async {
@@ -51,7 +61,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
 
   Future<void> _applySearch() async {
     setState(() {
-      _query = _searchController.text.trim();
+      _query = _searchInput.trim();
       _future = _load();
     });
     await _future;
@@ -223,6 +233,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
 
   @override
   void dispose() {
+    _searchDebounce?.cancel();
     _searchController.dispose();
     _scrollController.dispose();
     super.dispose();
@@ -262,11 +273,27 @@ class _ProductsScreenState extends State<ProductsScreen> {
                           : IconButton(
                               onPressed: () {
                                 _searchController.clear();
+                                setState(() {
+                                  _searchInput = '';
+                                });
                                 _applySearch();
                               },
                               icon: const Icon(Icons.clear_rounded),
                             ),
                     ),
+                    onChanged: (value) {
+                      setState(() {
+                        _searchInput = value;
+                      });
+                      _searchDebounce?.cancel();
+                      _searchDebounce = Timer(const Duration(milliseconds: 300), () {
+                        if (!mounted) return;
+                        setState(() {
+                          _query = _searchInput.trim();
+                          _future = _load();
+                        });
+                      });
+                    },
                     onSubmitted: (_) => _applySearch(),
                   ),
                   const SizedBox(height: 12),

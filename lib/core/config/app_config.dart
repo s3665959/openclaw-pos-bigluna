@@ -15,15 +15,30 @@ class AppConfig {
     final rawBaseUrl = _env('API_BASE_URL');
     final rawToken = _env('API_TOKEN');
     final rawDemoReadOnly = _env('DEMO_READ_ONLY');
-    final apiBaseUrl = rawBaseUrl.isEmpty ? 'https://openclaw.ganseeds.com' : rawBaseUrl;
+    final apiBaseUrl = _normalizeApiBaseUrl(rawBaseUrl);
     final demoReadOnly = rawDemoReadOnly.isEmpty ? true : _parseBool(rawDemoReadOnly, fallback: true);
 
     return AppConfig(
-      apiBaseUrl: apiBaseUrl.endsWith('/') ? apiBaseUrl.substring(0, apiBaseUrl.length - 1) : apiBaseUrl,
+      apiBaseUrl: apiBaseUrl,
       apiToken: rawToken,
       demoReadOnly: demoReadOnly,
     );
   }
+}
+
+String _normalizeApiBaseUrl(String rawBaseUrl) {
+  final trimmed = (rawBaseUrl.isEmpty ? 'https://openclaw.ganseeds.com' : rawBaseUrl).trim();
+  final withoutTrailingSlash = trimmed.endsWith('/') ? trimmed.substring(0, trimmed.length - 1) : trimmed;
+  final parsed = Uri.tryParse(withoutTrailingSlash);
+  final path = parsed?.path ?? '';
+
+  if (withoutTrailingSlash.endsWith('/pos-dashboard/api')) {
+    return withoutTrailingSlash;
+  }
+  if (path.isEmpty || path == '/' || path == '/pos-dashboard' || path == '/pos-dashboard/') {
+    return '$withoutTrailingSlash/pos-dashboard/api';
+  }
+  return withoutTrailingSlash;
 }
 
 String _env(String key) {

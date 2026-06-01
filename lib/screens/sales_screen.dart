@@ -82,7 +82,19 @@ class _SalesScreenState extends State<SalesScreen> {
                       }
 
                       final data = snapshot.data!;
+                      final rowsResult = data.rows;
+                      final rows = rowsResult.data ?? const <SalesRecord>[];
+                      final derived = _summarizeSalesRows(rows);
                       final summary = data.summary.data;
+                      final effectiveSummary = summary != null && (summary.totalSalesAmount > 0 || summary.transactionCount > 0 || summary.averageSaleValue > 0)
+                          ? summary
+                          : SalesSummary(
+                              totalSalesAmount: derived.totalRevenue,
+                              transactionCount: derived.transactionCount,
+                              averageSaleValue: derived.averageSale,
+                              firstSaleTime: derived.firstSaleTime ?? '',
+                              lastSaleTime: derived.lastSaleTime ?? '',
+                            );
                       return Column(
                         children: [
                           GridView.count(
@@ -95,27 +107,29 @@ class _SalesScreenState extends State<SalesScreen> {
                             children: [
                               StatCard(
                                 label: 'Total',
-                                value: summary == null ? 'API error' : formatMoney(summary.totalSalesAmount),
+                                value: rowsResult.error != null ? 'API error' : formatMoney(effectiveSummary.totalSalesAmount),
                                 icon: Icons.attach_money_rounded,
                                 subtitle: data.summary.error?.toString(),
                               ),
                               StatCard(
                                 label: 'Orders',
-                                value: summary == null ? 'API error' : '${summary.transactionCount}',
+                                value: rowsResult.error != null ? 'API error' : '${effectiveSummary.transactionCount}',
                                 icon: Icons.receipt_long_rounded,
                                 subtitle: data.summary.error?.toString(),
                               ),
                               StatCard(
                                 label: 'Average',
-                                value: summary == null ? 'API error' : formatMoney(summary.averageSaleValue),
+                                value: rowsResult.error != null ? 'API error' : formatMoney(effectiveSummary.averageSaleValue),
                                 icon: Icons.analytics_rounded,
                                 subtitle: data.summary.error?.toString(),
                               ),
                               StatCard(
                                 label: 'Time range',
-                                value: summary == null
+                                value: rowsResult.error != null
                                     ? 'API error'
-                                    : '${summary.firstSaleTime.isEmpty ? 'Not provided' : summary.firstSaleTime} - ${summary.lastSaleTime.isEmpty ? 'Not provided' : summary.lastSaleTime}',
+                                    : effectiveSummary.firstSaleTime.isEmpty && effectiveSummary.lastSaleTime.isEmpty
+                                    ? 'Not provided'
+                                    : '${effectiveSummary.firstSaleTime.isEmpty ? 'Not provided' : effectiveSummary.firstSaleTime} - ${effectiveSummary.lastSaleTime.isEmpty ? 'Not provided' : effectiveSummary.lastSaleTime}',
                                 icon: Icons.schedule_rounded,
                                 subtitle: data.summary.error?.toString(),
                               ),
@@ -235,4 +249,44 @@ class _LoadResult<T> {
 
   final T? data;
   final Object? error;
+}
+
+class _SalesDerived {
+  const _SalesDerived({
+    required this.totalRevenue,
+    required this.transactionCount,
+    required this.averageSale,
+    required this.firstSaleTime,
+    required this.lastSaleTime,
+  });
+
+  final double totalRevenue;
+  final int transactionCount;
+  final double averageSale;
+  final String? firstSaleTime;
+  final String? lastSaleTime;
+}
+
+_SalesDerived _summarizeSalesRows(List<SalesRecord> rows) {
+  if (rows.isEmpty) {
+    return const _SalesDerived(
+      totalRevenue: 0.0,
+      transactionCount: 0,
+      averageSale: 0.0,
+      firstSaleTime: null,
+      lastSaleTime: null,
+    );
+  }
+  final totalRevenue = rows.fold<double>(0, (sum, sale) => sum + sale.amount);
+  final transactionCount = rows.length;
+  final averageSale = transactionCount == 0 ? 0.0 : totalRevenue / transactionCount;
+  final firstSaleTime = rows.first.time;
+  final lastSaleTime = rows.last.time;
+  return _SalesDerived(
+    totalRevenue: totalRevenue,
+    transactionCount: transactionCount,
+    averageSale: averageSale,
+    firstSaleTime: firstSaleTime.isEmpty ? null : firstSaleTime,
+    lastSaleTime: lastSaleTime.isEmpty ? null : lastSaleTime,
+  );
 }

@@ -37,14 +37,24 @@ class _InventoryScreenState extends State<InventoryScreen> {
     };
 
     final results = await Future.wait<Object?>([
-      api.getStockSummary().catchError((_) => <String, int>{}),
-      api.listProducts(limit: 100, q: _query.isEmpty ? null : _query, stockStatus: stockStatus).catchError((_) => ProductListPage(page: 1, limit: 0, total: 0, totalPages: 1, rows: const [])),
+      _loadResult(() => api.getStockSummary()),
+      _loadResult(() => api.listProducts(limit: 100, q: _query.isEmpty ? null : _query, stockStatus: stockStatus)),
+      _loadResult(() => api.getProductCount()),
     ]);
 
     return _InventoryData(
-      summary: results[0] as Map<String, int>,
-      page: results[1] as ProductListPage,
+      summary: results[0] as _LoadResult<Map<String, int>>,
+      page: results[1] as _LoadResult<ProductListPage>,
+      productCount: results[2] as _LoadResult<int>,
     );
+  }
+
+  Future<_LoadResult<T>> _loadResult<T>(Future<T> Function() loader) async {
+    try {
+      return _LoadResult<T>(data: await loader());
+    } catch (error) {
+      return _LoadResult<T>(error: error);
+    }
   }
 
   Future<void> _refresh() async {
@@ -133,15 +143,17 @@ class _InventoryScreenState extends State<InventoryScreen> {
                 }
 
                 final data = snapshot.data;
-                final summary = data?.summary ?? const <String, int>{};
-                final page = data?.page;
-                final total = summary['totalProducts'] ?? page?.total ?? 0;
-                final low = summary['lowStockCount'] ?? 0;
-                final out = summary['outOfStockCount'] ?? 0;
-                final negative = summary['negativeStockCount'] ?? 0;
-                final healthy = (total - low - out - negative).clamp(0, 999999);
-
+                final summaryResult = data?.summary;
+                final pageResult = data?.page;
+                final productCountResult = data?.productCount;
+                final summary = summaryResult?.data;
+                final page = pageResult?.data;
+                final total = summary?['totalProducts'] ?? productCountResult?.data ?? page?.total;
+                final low = summary?['lowStockCount'];
+                final out = summary?['outOfStockCount'];
+                final negative = summary?['negativeStockCount'];
                 final rows = page?.rows ?? const <ProductRecord>[];
+                final hasError = summaryResult?.error != null || pageResult?.error != null || productCountResult?.error != null;
                 return Column(
                   children: [
                     GridView.count(
@@ -152,10 +164,28 @@ class _InventoryScreenState extends State<InventoryScreen> {
                       mainAxisSpacing: 12,
                       crossAxisSpacing: 12,
                       children: [
-                        StatCard(label: 'Healthy', value: '$healthy', icon: Icons.verified_rounded),
-                        StatCard(label: 'Low', value: '$low', icon: Icons.warning_amber_rounded),
-                        StatCard(label: 'Out', value: '$out', icon: Icons.remove_circle_outline_rounded),
-                        StatCard(label: 'Negative', value: '$negative', icon: Icons.trending_down_rounded),
+                        StatCard(
+                          label: 'Healthy',
+                          value: hasError || total == null || low == null || out == null || negative == null
+                              ? 'API error'
+                              : '${(total - low - out - negative).clamp(0, 999999)}',
+                          icon: Icons.verified_rounded,
+                        ),
+                        StatCard(
+                          label: 'Low',
+                          value: low == null ? 'API error' : '$low',
+                          icon: Icons.warning_amber_rounded,
+                        ),
+                        StatCard(
+                          label: 'Out',
+                          value: out == null ? 'API error' : '$out',
+                          icon: Icons.remove_circle_outline_rounded,
+                        ),
+                        StatCard(
+                          label: 'Negative',
+                          value: negative == null ? 'API error' : '$negative',
+                          icon: Icons.trending_down_rounded,
+                        ),
                       ],
                     ),
                     const SizedBox(height: 12),
@@ -226,8 +256,20 @@ class _InventoryData {
   const _InventoryData({
     required this.summary,
     required this.page,
+    required this.productCount,
   });
 
-  final Map<String, int> summary;
-  final ProductListPage page;
+  final _LoadResult<Map<String, int>> summary;
+  final _LoadResult<ProductListPage> page;
+  final _LoadResult<int> productCount;
+}
+
+class _LoadResult<T> {
+  const _LoadResult({
+    this.data,
+    this.error,
+  });
+
+  final T? data;
+  final Object? error;
 }

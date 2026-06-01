@@ -35,13 +35,17 @@ class _HomeScreenState extends State<HomeScreen> {
     final api = AppServices.api;
     final results = await Future.wait<Object?>([
       _loadResult(() => api.getSystemSnapshot()),
+      _loadResult(() => api.getStockSummary()),
       _loadResult(() => api.getProductCount()),
       _loadResult(() => api.getTodaySalesSummary()),
+      _loadResult(() => api.getTodaySales()),
     ]);
     return _HomeSnapshot(
       systemSnapshot: results[0] as _LoadResult<SystemSnapshot>,
-      productCount: results[1] as _LoadResult<int>,
-      salesSummary: results[2] as _LoadResult<SalesSummary>,
+      stockSummary: results[1] as _LoadResult<Map<String, int>>,
+      productCount: results[2] as _LoadResult<int>,
+      salesSummary: results[3] as _LoadResult<SalesSummary>,
+      salesRows: results[4] as _LoadResult<List<SalesRecord>>,
     );
   }
 
@@ -108,6 +112,7 @@ class _HomeScreenState extends State<HomeScreen> {
             final data = snapshot.data;
             final health = data?.systemSnapshot.data?.health;
             final db = data?.systemSnapshot.data?.databaseInfo;
+            final stockSummary = data?.stockSummary.data;
             final writeMode = health?.writeMode ?? false;
             final statusLabel = health == null
                 ? l10n.notProvidedByApi
@@ -119,15 +124,27 @@ class _HomeScreenState extends State<HomeScreen> {
                 : health.ok
                     ? (writeMode ? Colors.green : Colors.orange)
                     : Colors.red;
-            final productCountText = data?.productCount.data != null
-                ? '${data!.productCount.data}'
-                : l10n.notProvidedByApi;
-            final productCountSubtitle = data?.productCount.error == null ? '/products/count' : 'API error';
+            final productCountValue = stockSummary?['totalProducts'] ?? data?.productCount.data;
+            final productCountError = data?.stockSummary.error ?? data?.productCount.error;
+            final productCountText = productCountValue != null ? '$productCountValue' : l10n.notProvidedByApi;
+            final productCountSubtitle = productCountError == null ? '/stock/summary' : 'API error';
             final salesSummary = data?.salesSummary.data;
-            final salesText = salesSummary != null ? formatMoney(salesSummary.totalSalesAmount) : l10n.notProvidedByApi;
-            final salesSubtitle = salesSummary != null
-                ? '${salesSummary.transactionCount} orders'
-                : 'API error';
+            final salesRows = data?.salesRows.data ?? const <SalesRecord>[];
+            final derivedSales = _summarizeSalesRows(salesRows);
+            final salesError = data?.salesSummary.error ?? data?.salesRows.error;
+            final effectiveSales = salesSummary != null && (salesSummary.totalSalesAmount > 0 || salesSummary.transactionCount > 0 || salesSummary.averageSaleValue > 0)
+                ? salesSummary
+                : SalesSummary(
+                    totalSalesAmount: derivedSales.totalRevenue,
+                    transactionCount: derivedSales.transactionCount,
+                    averageSaleValue: derivedSales.averageSale,
+                    firstSaleTime: derivedSales.firstSaleTime ?? '',
+                    lastSaleTime: derivedSales.lastSaleTime ?? '',
+                  );
+            final salesText = salesError != null ? (salesSummary != null ? formatMoney(salesSummary.totalSalesAmount) : l10n.notProvidedByApi) : formatMoney(effectiveSales.totalSalesAmount);
+            final salesSubtitle = salesError != null
+                ? (salesSummary != null ? '${salesSummary.transactionCount} orders' : 'API error')
+                : '${effectiveSales.transactionCount} orders';
             final databaseName = db?.databaseName.isNotEmpty == true ? db!.databaseName : l10n.notProvidedByApi;
             final editionText = db?.edition?.isNotEmpty == true ? db!.edition! : l10n.notProvidedByApi;
 
@@ -263,13 +280,17 @@ class _HomeScreenState extends State<HomeScreen> {
 class _HomeSnapshot {
   const _HomeSnapshot({
     required this.systemSnapshot,
+    required this.stockSummary,
     required this.productCount,
     required this.salesSummary,
+    required this.salesRows,
   });
 
   final _LoadResult<SystemSnapshot> systemSnapshot;
+  final _LoadResult<Map<String, int>> stockSummary;
   final _LoadResult<int> productCount;
   final _LoadResult<SalesSummary> salesSummary;
+  final _LoadResult<List<SalesRecord>> salesRows;
 }
 
 class _LoadResult<T> {
@@ -280,4 +301,44 @@ class _LoadResult<T> {
 
   final T? data;
   final Object? error;
+}
+
+class _SalesDerived {
+  const _SalesDerived({
+    required this.totalRevenue,
+    required this.transactionCount,
+    required this.averageSale,
+    required this.firstSaleTime,
+    required this.lastSaleTime,
+  });
+
+  final double totalRevenue;
+  final int transactionCount;
+  final double averageSale;
+  final String? firstSaleTime;
+  final String? lastSaleTime;
+}
+
+_SalesDerived _summarizeSalesRows(List<SalesRecord> rows) {
+  if (rows.isEmpty) {
+    return const _SalesDerived(
+      totalRevenue: 0.0,
+      transactionCount: 0,
+      averageSale: 0.0,
+      firstSaleTime: null,
+      lastSaleTime: null,
+    );
+  }
+  final totalRevenue = rows.fold<double>(0, (sum, sale) => sum + sale.amount);
+  final transactionCount = rows.length;
+  final averageSale = transactionCount == 0 ? 0.0 : totalRevenue / transactionCount;
+  final firstSaleTime = rows.first.time;
+  final lastSaleTime = rows.last.time;
+  return _SalesDerived(
+    totalRevenue: totalRevenue,
+    transactionCount: transactionCount,
+    averageSale: averageSale,
+    firstSaleTime: firstSaleTime.isEmpty ? null : firstSaleTime,
+    lastSaleTime: lastSaleTime.isEmpty ? null : lastSaleTime,
+  );
 }

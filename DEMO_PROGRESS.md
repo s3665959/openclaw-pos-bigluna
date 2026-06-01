@@ -8,6 +8,8 @@
 
 ## What was fixed
 
+- Root cause for the Android APK mismatch: the Flutter client was calling the host root instead of the connector prefix, so requests such as `/products/list`, `/products/search`, `/stock/summary`, `/products/count`, `/sales/today`, and `/barcode/lookup` were going to the wrong URL and returning HTML, empty data, or misleading fallback values.
+- `AppConfig` now normalizes `API_BASE_URL=https://openclaw.ganseeds.com` to the live connector prefix `/pos-dashboard/api`, matching the web app.
 - Dashboard and System Status were showing misleading values because some model parsing and UI fallbacks were turning missing or failed API data into `0`, `-`, or `unknown`.
 - `ConnectorHealth.mode` now falls back to `write-enabled` or `read-only` instead of `unknown`.
 - `DatabaseInfo` no longer invents a database name when the API does not provide one.
@@ -116,6 +118,12 @@
 - `flutter test`: passed
 - `flutter build apk --debug`: passed
 - Debug APK output: `build/app/outputs/flutter-apk/app-debug.apk`
+- Verified live connector endpoints from the corrected prefix:
+  - `GET /pos-dashboard/api/products/list?q=orange`
+  - `GET /pos-dashboard/api/products/search?q=orange`
+  - `GET /pos-dashboard/api/barcode/lookup?code=orange`
+  - `GET /pos-dashboard/api/stock/summary`
+  - `GET /pos-dashboard/api/products/count`
 
 ## Notes
 
@@ -128,4 +136,4 @@
 ## Git
 
 - Local git repo is initialized in `/home/april/projects/openclaw-pos-bigluna`
-- Latest commit hash: `2e8cc1a` (`Polish demo UI and locale handling`)
+- Latest commit hash: pending final commit after this fix set
