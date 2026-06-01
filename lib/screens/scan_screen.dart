@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 
 import '../core/api/app_services.dart';
@@ -20,6 +21,8 @@ class ScanScreen extends StatefulWidget {
 class _ScanScreenState extends State<ScanScreen> {
   final _manualController = TextEditingController();
   final _scannerController = MobileScannerController(detectionSpeed: DetectionSpeed.noDuplicates);
+  final _scrollController = ScrollController();
+  final _actionsKey = GlobalKey();
   ProductRecord? _product;
   String? _message;
   bool _loading = false;
@@ -29,6 +32,7 @@ class _ScanScreenState extends State<ScanScreen> {
   @override
   void dispose() {
     _manualController.dispose();
+    _scrollController.dispose();
     _scannerController.dispose();
     super.dispose();
   }
@@ -50,14 +54,17 @@ class _ScanScreenState extends State<ScanScreen> {
     });
 
     try {
-      final api = AppServices.api;
-      final product = await api.lookupBarcode(code) ?? await api.lookupProductDetail(code);
+      final product = await _reloadCurrentProduct(code);
       if (!mounted) return;
       setState(() {
         _product = product;
         _loading = false;
         _message = product == null ? 'No product found in the connector API' : 'Lookup successful';
       });
+      if (product != null) {
+        _playScanConfirm();
+        _scrollToActions();
+      }
     } catch (error) {
       if (!mounted) return;
       setState(() {
@@ -65,6 +72,29 @@ class _ScanScreenState extends State<ScanScreen> {
         _message = error.toString();
       });
     }
+  }
+
+  void _playScanConfirm() {
+    try {
+      SystemSound.play(SystemSoundType.click);
+      HapticFeedback.mediumImpact();
+    } catch (_) {
+      // Best effort only.
+    }
+  }
+
+  void _scrollToActions() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final context = _actionsKey.currentContext;
+      if (context == null) return;
+      Scrollable.ensureVisible(
+        context,
+        duration: const Duration(milliseconds: 320),
+        curve: Curves.easeInOut,
+        alignment: 0.12,
+      );
+    });
   }
 
   Future<void> _openActions(ProductRecord product, ProductActionMode mode) async {
@@ -80,7 +110,7 @@ class _ScanScreenState extends State<ScanScreen> {
       },
     );
     if (changed == true) {
-      final refreshed = await AppServices.api.lookupBarcode(product.barcode) ?? await AppServices.api.lookupProductDetail(product.id);
+      final refreshed = await _reloadCurrentProduct(product.barcode.isNotEmpty ? product.barcode : product.id);
       if (!mounted) return;
       if (refreshed != null) {
         setState(() {
@@ -90,6 +120,37 @@ class _ScanScreenState extends State<ScanScreen> {
     }
   }
 
+  Future<ProductRecord?> _reloadCurrentProduct(String sourceCode) async {
+    final query = sourceCode.trim();
+    if (query.isEmpty) return null;
+    final api = AppServices.api;
+    final barcode = await api.lookupBarcode(query);
+    final detail = await api.lookupProductDetail(query);
+    if (barcode == null) {
+      return detail;
+    }
+    if (detail == null) {
+      return barcode;
+    }
+    return ProductRecord(
+      id: barcode.id.isNotEmpty ? barcode.id : detail.id,
+      name: barcode.name.isNotEmpty ? barcode.name : detail.name,
+      category: barcode.category.isNotEmpty ? barcode.category : detail.category,
+      vendor: barcode.vendor.isNotEmpty ? barcode.vendor : detail.vendor,
+      barcode: barcode.barcode.isNotEmpty ? barcode.barcode : detail.barcode,
+      price: barcode.price,
+      cost: barcode.cost ?? detail.cost,
+      reorderLevel: barcode.reorderLevel ?? detail.reorderLevel,
+      lowStockThreshold: barcode.lowStockThreshold ?? detail.lowStockThreshold,
+      stockQty: barcode.stockQty,
+      status: barcode.status.isNotEmpty ? barcode.status : detail.status,
+      raw: {
+        ...?detail.raw,
+        ...?barcode.raw,
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
@@ -97,6 +158,7 @@ class _ScanScreenState extends State<ScanScreen> {
     return AppFrame(
       title: l10n.scanBarcode,
       child: ListView(
+        controller: _scrollController,
         padding: const EdgeInsets.all(16),
         children: [
           SectionCard(
@@ -163,6 +225,7 @@ class _ScanScreenState extends State<ScanScreen> {
           ],
           if (product != null)
             SectionCard(
+              key: _actionsKey,
               title: product.name,
               subtitle: 'Data from barcode lookup / product detail',
               child: Column(

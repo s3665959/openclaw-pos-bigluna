@@ -54,10 +54,7 @@ class _SalesScreenState extends State<SalesScreen> {
       );
     }
     final runs = archiveRunsResult.data ?? const <Map<String, dynamic>>[];
-    final run = runs.cast<Map<String, dynamic>?>().firstWhere(
-          (row) => (row?['business_date']?.toString() ?? '') == selectedIso,
-          orElse: () => null,
-        );
+    final run = _selectArchiveRun(runs, selectedIso);
     if (run == null) {
       return _SalesData(
         selectedDate: _selectedDate,
@@ -65,7 +62,7 @@ class _SalesScreenState extends State<SalesScreen> {
         summary: const _LoadResult<SalesSummary>(data: null, error: null),
         rows: const _LoadResult<List<SalesRecord>>(data: <SalesRecord>[], error: null),
         topProducts: const _LoadResult<List<Map<String, dynamic>>>(data: <Map<String, dynamic>>[], error: null),
-        archiveLabel: 'No archived run found for $selectedIso',
+        archiveLabel: 'No sales data for $selectedIso',
       );
     }
 
@@ -77,7 +74,7 @@ class _SalesScreenState extends State<SalesScreen> {
         .map((row) => _archiveRowToSalesRecord(Map<String, dynamic>.from(row)))
         .toList(growable: false);
     final summaryMap = detail['summary'] as Map<String, dynamic>? ?? const <String, dynamic>{};
-    final totalRevenue = _numberFrom(summaryMap['grand_total'] ?? summaryMap['amount_total'] ?? 0);
+    final totalRevenue = _numberFrom(summaryMap['amount_total'] ?? summaryMap['grand_total'] ?? rows.fold<double>(0, (sum, row) => sum + row.amount));
     final transactionCount = _intFrom(summaryMap['invoice_count'] ?? rows.length);
     final average = transactionCount > 0 ? totalRevenue / transactionCount : 0.0;
     final firstSaleTime = rows.isEmpty ? '' : rows.first.time;
@@ -97,7 +94,7 @@ class _SalesScreenState extends State<SalesScreen> {
       ),
       rows: _LoadResult(data: rows, error: detailResult.error),
       topProducts: const _LoadResult(data: <Map<String, dynamic>>[]),
-      archiveLabel: 'Archive run ${run['business_date']?.toString() ?? selectedIso}',
+      archiveLabel: 'Archive run ${run['business_date']?.toString() ?? selectedIso} • ${_intFrom(run['invoice_count'])} invoices',
     );
   }
 
@@ -190,7 +187,8 @@ class _SalesScreenState extends State<SalesScreen> {
                       final rows = rowsResult.data ?? const <SalesRecord>[];
                       final derived = _summarizeSalesRows(rows);
                       final summary = data.summary.data;
-                      final archiveMissing = data.archiveLabel?.startsWith('No archived run found') == true;
+                      final archiveNoData = data.archiveLabel?.startsWith('No sales data for') == true;
+                      final archiveLabelIsError = data.archiveLabel?.startsWith('API error') == true;
                       final effectiveSummary = summary != null && (summary.totalSalesAmount > 0 || summary.transactionCount > 0 || summary.averageSaleValue > 0)
                           ? summary
                           : SalesSummary(
@@ -212,31 +210,51 @@ class _SalesScreenState extends State<SalesScreen> {
                             children: [
                               StatCard(
                                 label: 'Total',
-                                value: archiveMissing ? 'Not provided' : (rowsResult.error != null || summary == null ? 'API error' : formatMoney(effectiveSummary.totalSalesAmount)),
+                                value: rowsResult.error != null || data.summary.error != null
+                                    ? 'API error'
+                                    : archiveNoData
+                                        ? 'No sales data'
+                                        : summary == null
+                                            ? 'API error'
+                                            : formatMoney(effectiveSummary.totalSalesAmount),
                                 icon: Icons.attach_money_rounded,
                                 subtitle: rowsResult.error?.toString() ?? data.summary.error?.toString(),
                               ),
                               StatCard(
                                 label: 'Orders',
-                                value: archiveMissing ? 'Not provided' : (rowsResult.error != null || summary == null ? 'API error' : '${effectiveSummary.transactionCount}'),
+                                value: rowsResult.error != null || data.summary.error != null
+                                    ? 'API error'
+                                    : archiveNoData
+                                        ? 'No sales data'
+                                        : summary == null
+                                            ? 'API error'
+                                            : '${effectiveSummary.transactionCount}',
                                 icon: Icons.receipt_long_rounded,
                                 subtitle: rowsResult.error?.toString() ?? data.summary.error?.toString(),
                               ),
                               StatCard(
                                 label: 'Average',
-                                value: archiveMissing ? 'Not provided' : (rowsResult.error != null || summary == null ? 'API error' : formatMoney(effectiveSummary.averageSaleValue)),
+                                value: rowsResult.error != null || data.summary.error != null
+                                    ? 'API error'
+                                    : archiveNoData
+                                        ? 'No sales data'
+                                        : summary == null
+                                            ? 'API error'
+                                            : formatMoney(effectiveSummary.averageSaleValue),
                                 icon: Icons.analytics_rounded,
                                 subtitle: rowsResult.error?.toString() ?? data.summary.error?.toString(),
                               ),
                               StatCard(
                                 label: 'Time range',
-                                value: archiveMissing
-                                    ? 'Not provided'
-                                    : rowsResult.error != null || summary == null
+                                value: rowsResult.error != null || data.summary.error != null
                                     ? 'API error'
-                                    : effectiveSummary.firstSaleTime.isEmpty && effectiveSummary.lastSaleTime.isEmpty
-                                        ? 'Not provided'
-                                        : '${effectiveSummary.firstSaleTime.isEmpty ? 'Not provided' : effectiveSummary.firstSaleTime} - ${effectiveSummary.lastSaleTime.isEmpty ? 'Not provided' : effectiveSummary.lastSaleTime}',
+                                    : archiveNoData
+                                        ? 'No sales data'
+                                        : summary == null
+                                            ? 'API error'
+                                            : effectiveSummary.firstSaleTime.isEmpty && effectiveSummary.lastSaleTime.isEmpty
+                                                ? 'Not provided'
+                                                : '${effectiveSummary.firstSaleTime.isEmpty ? 'Not provided' : effectiveSummary.firstSaleTime} - ${effectiveSummary.lastSaleTime.isEmpty ? 'Not provided' : effectiveSummary.lastSaleTime}',
                                 icon: Icons.schedule_rounded,
                                 subtitle: rowsResult.error?.toString() ?? data.summary.error?.toString(),
                               ),
@@ -248,9 +266,13 @@ class _SalesScreenState extends State<SalesScreen> {
                           ],
                           if (data.source == SalesDataSource.archive) ...[
                             const SizedBox(height: 8),
-                            const Text(
-                              'Historical sales come from the archive run for the selected business date.',
-                              style: TextStyle(fontSize: 12),
+                            Text(
+                              archiveNoData
+                                  ? 'The backend does not have verified sales data for this business date.'
+                                  : archiveLabelIsError
+                                      ? 'Archive loading failed. Retry to fetch the run again.'
+                                      : 'Historical sales come from the archive run for the selected business date.',
+                              style: const TextStyle(fontSize: 12),
                             ),
                           ],
                         ],
@@ -276,8 +298,9 @@ class _SalesScreenState extends State<SalesScreen> {
                     child: ErrorStateView(message: snapshot.error.toString(), onRetry: _refresh),
                   );
                 }
-                final rowsResult = snapshot.data?.rows;
-                final topProductsResult = snapshot.data?.topProducts;
+                final data = snapshot.data;
+                final rowsResult = data?.rows;
+                final topProductsResult = data?.topProducts;
                 final rows = rowsResult?.data ?? const <SalesRecord>[];
                 final topProducts = topProductsResult?.data ?? const <Map<String, dynamic>>[];
 
@@ -290,8 +313,8 @@ class _SalesScreenState extends State<SalesScreen> {
                       ErrorStateView(message: rowsResult!.error.toString(), onRetry: _refresh)
                     else if (rows.isEmpty)
                       const EmptyStateView(
-                        title: 'No sales found',
-                        description: 'The selected date returned no invoice rows.',
+                        title: 'No sales data',
+                        description: 'The selected business date has no verified sales rows in the backend archive.',
                       )
                     else
                       for (final sale in rows.take(20)) ...[
@@ -442,6 +465,33 @@ int _intFrom(dynamic value) {
   if (value == null) return 0;
   if (value is num) return value.round();
   return int.tryParse(value.toString().replaceAll(',', '').trim()) ?? 0;
+}
+
+Map<String, dynamic>? _selectArchiveRun(List<Map<String, dynamic>> runs, String selectedIso) {
+  final matches = runs.where((row) => row['business_date']?.toString() == selectedIso).toList();
+  if (matches.isEmpty) {
+    return null;
+  }
+  matches.sort((left, right) => _archiveRunScore(right).compareTo(_archiveRunScore(left)));
+  for (final row in matches) {
+    if (_intFrom(row['invoice_count']) > 0) {
+      return row;
+    }
+  }
+  return null;
+}
+
+int _archiveRunScore(Map<String, dynamic> row) {
+  var score = 0;
+  final status = row['status']?.toString().toLowerCase() ?? '';
+  if (status == 'verified' || row['verification_passed'] == true) {
+    score += 1000;
+  }
+  if (row['dry_run'] == false) {
+    score += 100;
+  }
+  score += _intFrom(row['invoice_count']);
+  return score;
 }
 
 SalesRecord _archiveRowToSalesRecord(Map<String, dynamic> row) {

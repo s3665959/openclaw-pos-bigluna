@@ -99,8 +99,8 @@ class _ProductActionsSheetState extends State<ProductActionsSheet> {
     _product = widget.product;
     _mode = widget.initialMode;
     _productNameController.text = widget.product.name;
-    _costController.text = widget.product.cost == null ? '' : widget.product.cost!.toString();
-    _sellingController.text = widget.product.price.toString();
+    _costController.text = _editableCostText(widget.product);
+    _sellingController.text = _editablePriceText(widget.product);
     _loadModeData(_mode);
   }
 
@@ -144,8 +144,8 @@ class _ProductActionsSheetState extends State<ProductActionsSheet> {
           if (refreshed != null) {
             _product = refreshed;
             _productNameController.text = refreshed.name;
-            _costController.text = refreshed.cost == null ? '' : refreshed.cost!.toString();
-            _sellingController.text = refreshed.price.toString();
+            _costController.text = _editableCostText(refreshed);
+            _sellingController.text = _editablePriceText(refreshed);
           }
           break;
         case ProductActionMode.suppliers:
@@ -169,11 +169,31 @@ class _ProductActionsSheetState extends State<ProductActionsSheet> {
   Future<ProductRecord?> _reloadProduct() async {
     final api = AppServices.api;
     final query = _product.barcode.isNotEmpty ? _product.barcode : _product.id;
+    final barcode = await api.lookupBarcode(query);
     final detail = await api.lookupProductDetail(query);
-    if (detail != null) {
+    if (barcode == null) {
       return detail;
     }
-    return api.lookupBarcode(query);
+    if (detail == null) {
+      return barcode;
+    }
+    return ProductRecord(
+      id: barcode.id.isNotEmpty ? barcode.id : detail.id,
+      name: barcode.name.isNotEmpty ? barcode.name : detail.name,
+      category: barcode.category.isNotEmpty ? barcode.category : detail.category,
+      vendor: barcode.vendor.isNotEmpty ? barcode.vendor : detail.vendor,
+      barcode: barcode.barcode.isNotEmpty ? barcode.barcode : detail.barcode,
+      price: barcode.price,
+      cost: barcode.cost ?? detail.cost,
+      reorderLevel: barcode.reorderLevel ?? detail.reorderLevel,
+      lowStockThreshold: barcode.lowStockThreshold ?? detail.lowStockThreshold,
+      stockQty: barcode.stockQty,
+      status: barcode.status.isNotEmpty ? barcode.status : detail.status,
+      raw: {
+        ...?detail.raw,
+        ...?barcode.raw,
+      },
+    );
   }
 
   Future<void> _loadSuppliers() async {
@@ -299,7 +319,7 @@ class _ProductActionsSheetState extends State<ProductActionsSheet> {
 
   Future<void> _saveProduct() async {
     final productName = _productNameController.text.trim();
-    final costPrice = double.tryParse(_costController.text.trim());
+    final costPrice = _editableCostValue(_product, _costController.text.trim());
     final sellingPrice = double.tryParse(_sellingController.text.trim());
     if (productName.isEmpty || costPrice == null || costPrice < 0 || sellingPrice == null || sellingPrice < 0) {
       setState(() => _error = 'Enter a valid product name, cost price, and selling price.');
@@ -337,8 +357,8 @@ class _ProductActionsSheetState extends State<ProductActionsSheet> {
         _product = refreshed;
         widget.onProductChanged?.call(refreshed);
         _productNameController.text = refreshed.name;
-        _costController.text = refreshed.cost == null ? '' : refreshed.cost!.toString();
-        _sellingController.text = refreshed.price.toString();
+        _costController.text = _editableCostText(refreshed);
+        _sellingController.text = _editablePriceText(refreshed);
       }
       setState(() {
         _message = 'Product updated successfully';
@@ -355,6 +375,75 @@ class _ProductActionsSheetState extends State<ProductActionsSheet> {
         });
       }
     }
+  }
+
+  String _editableCostText(ProductRecord product) {
+    final cost = _editableCostValue(product, '');
+    return cost == null ? '0' : _trimNumeric(cost);
+  }
+
+  String _editablePriceText(ProductRecord product) {
+    final price = _editablePriceValue(product);
+    return _trimNumeric(price);
+  }
+
+  double? _editableCostValue(ProductRecord product, String inputText) {
+    final parsedInput = _parseNumber(inputText);
+    if (parsedInput != null) {
+      return parsedInput;
+    }
+    final raw = product.raw ?? const <String, dynamic>{};
+    final candidates = <dynamic>[
+      product.cost,
+      raw['cost'],
+      raw['cost_price'],
+      raw['CostPrice'],
+      raw['Cost'],
+      raw['UnitCost'],
+      raw['unit_cost'],
+      raw['unitCost'],
+    ];
+    for (final candidate in candidates) {
+      final parsed = _parseNumber(candidate?.toString() ?? '');
+      if (parsed != null) {
+        return parsed;
+      }
+    }
+    return null;
+  }
+
+  double _editablePriceValue(ProductRecord product) {
+    final raw = product.raw ?? const <String, dynamic>{};
+    final candidates = <dynamic>[
+      product.price,
+      raw['price'],
+      raw['selling_price'],
+      raw['sellingPrice'],
+      raw['SalesPrice1'],
+      raw['SalesPrice'],
+      raw['UnitPrice'],
+      raw['unit_price'],
+    ];
+    for (final candidate in candidates) {
+      final parsed = _parseNumber(candidate?.toString() ?? '');
+      if (parsed != null) {
+        return parsed;
+      }
+    }
+    return product.price;
+  }
+
+  double? _parseNumber(String text) {
+    final normalized = text.trim().replaceAll(',', '');
+    if (normalized.isEmpty || normalized.toUpperCase() == 'NULL') {
+      return null;
+    }
+    return double.tryParse(normalized);
+  }
+
+  String _trimNumeric(double value) {
+    final fixed = value.toStringAsFixed(2);
+    return fixed.endsWith('.00') ? fixed.substring(0, fixed.length - 3) : fixed.replaceFirst(RegExp(r'0+$'), '').replaceFirst(RegExp(r'\.$'), '');
   }
 
   void _searchVendors(String value) {

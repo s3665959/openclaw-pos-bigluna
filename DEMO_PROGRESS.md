@@ -1,6 +1,6 @@
 # Demo Progress
 
-- Timestamp: 2026-06-01 18:16 +07
+- Timestamp: 2026-06-02 04:00 +07
 - Flutter project path: `/home/april/projects/openclaw-pos-bigluna`
 - OpenClaw reference paths inspected:
   - `/home/april/pos-dashboard`
@@ -25,6 +25,8 @@
   - manage suppliers
   - add expiry lot
 - Sales now supports a selected business date by reading archive runs from the backend and loading the matching sales detail when the date is not today.
+- Product edit refresh now prefers fresh `barcode/lookup` data and only falls back to `products/detail` for missing fields, because `products/detail` can lag behind a write.
+- Scan Barcode now plays a confirmation sound/vibration on successful scan and auto-scrolls to the product actions block.
 
 ## Completed
 
@@ -112,6 +114,17 @@
 - After increase: `11`
 - Decrease: `-2` via `POST /stock/direct-adjust`
 - After decrease: `9`
+- Product edit verification:
+  - `POST /pos-dashboard/api/products/update`
+  - Product: `00001111`
+  - Before: name `BO WAGU`, cost `0`, selling `49.99`
+  - After: name `BO WAGU`, cost `0`, selling `50.49`
+  - Backend response reported `changed_fields=["cost_price","selling_price"]`
+- Sales date verification:
+  - `2026-05-30` uses archive run `287ffb71-ffe7-477f-8d87-efc49eb6ef8f`
+  - `amount_total=1842.0700000000002`
+  - `invoice_count=185`
+  - `2026-05-31` has no verified sales rows, so Flutter now shows `No sales data` instead of fake `0`
 - Expiry lot create:
   - `stock_id`: `00001111`
   - `batch_no`: `BL-DEMO-0001`
@@ -143,6 +156,9 @@
   - `GET /pos-dashboard/api/barcode/lookup?code=orange`
   - `GET /pos-dashboard/api/stock/summary`
   - `GET /pos-dashboard/api/products/count`
+  - `GET /pos-dashboard/api/archive/runs?month=2026-05&page=1&page_size=50`
+  - `GET /pos-dashboard/api/archive/runs/287ffb71-ffe7-477f-8d87-efc49eb6ef8f/sales-detail?page=1&limit=2&sort=transaction_desc`
+  - `POST /pos-dashboard/api/products/update` for `00001111`
 
 ## Notes
 
