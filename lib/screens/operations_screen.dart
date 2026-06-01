@@ -1,6 +1,7 @@
 import 'dart:math';
 
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 
 import '../core/api/app_services.dart';
 import '../models/pos_models.dart';
@@ -200,6 +201,34 @@ class _OperationsScreenState extends State<OperationsScreen> {
     }
   }
 
+  Future<void> _pickExpiryDate() async {
+    final initial = _parseExpiryDate(_expiryDateController.text) ?? DateTime.now();
+    final firstDate = DateTime(2000);
+    final lastDate = DateTime(2100);
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: initial.isBefore(firstDate)
+          ? firstDate
+          : initial.isAfter(lastDate)
+              ? lastDate
+              : initial,
+      firstDate: firstDate,
+      lastDate: lastDate,
+      helpText: 'Select expiry date',
+    );
+    if (picked == null) return;
+    setState(() {
+      _expiryDateController.text = DateFormat('yyyy-MM-dd').format(picked);
+      _expiryMessage = '';
+    });
+  }
+
+  DateTime? _parseExpiryDate(String value) {
+    final parsed = value.trim();
+    if (parsed.isEmpty) return null;
+    return DateTime.tryParse(parsed);
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
@@ -307,7 +336,17 @@ class _OperationsScreenState extends State<OperationsScreen> {
                     const SizedBox(height: 12),
                     TextField(
                       controller: _expiryDateController,
-                      decoration: const InputDecoration(labelText: 'Expiry date (YYYY-MM-DD)', prefixIcon: Icon(Icons.event_rounded)),
+                      readOnly: true,
+                      onTap: _pickExpiryDate,
+                      decoration: InputDecoration(
+                        labelText: 'Expiry date (YYYY-MM-DD)',
+                        prefixIcon: const Icon(Icons.event_rounded),
+                        suffixIcon: IconButton(
+                          tooltip: 'Pick date',
+                          onPressed: _pickExpiryDate,
+                          icon: const Icon(Icons.calendar_month_rounded),
+                        ),
+                      ),
                     ),
                     const SizedBox(height: 12),
                     TextField(

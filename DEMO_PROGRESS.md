@@ -162,6 +162,13 @@
 
 ## Notes
 
+- Root cause for `default_vendor_cost_not_found`:
+  - The failing product `ABALONE SAUCE` (`014268800937`) has a default supplier relation in `/product-suppliers`, but the product master still reports `DefaultVendor = NULL`.
+  - Live comparison shows products that save successfully already have a non-null `DefaultVendor` value in the product master, so the public supplier mapping API is not enough to initialize the backend cost row.
+  - The live public API did not expose a supported write endpoint to set the missing product-master default vendor linkage directly.
+- Flutter changes in this round:
+  - Product actions now report the backend blocker more clearly when the default vendor cost row is missing.
+  - Expiry lot date inputs now open a date picker in both the shared product actions sheet and the operations screen.
 - Android SDK is installed at `/home/april/projects/android-sdk`
 - `JAVA_HOME` must point to `/home/april/projects/java-17` for Android builds in this shell
 - No Android device was attached when checking `adb devices`, so I could not capture a fresh on-device screenshot from this environment
