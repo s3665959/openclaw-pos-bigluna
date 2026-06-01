@@ -1,6 +1,6 @@
 # Demo Progress
 
-- Timestamp: 2026-06-01 17:45 ICT
+- Timestamp: 2026-06-01 17:23 ICT
 - Flutter project path: `/home/april/projects/openclaw-pos-bigluna`
 - OpenClaw web/backend inspected:
   - `/home/april/pos-dashboard`
@@ -11,9 +11,9 @@
 - Created a standalone Flutter demo app named `openclaw_pos_bigluna`
 - Set app display name to `Big Luna POS`
 - Added `.env.example` and local `.env` loading via `flutter_dotenv`
-- Added `DEMO_READ_ONLY=true` safety gate for demo mode
+- Added optional `DEMO_READ_ONLY` safety gate for future safety mode
 - Added Dio API client with optional bearer token support
-- Added demo read-only guard that blocks live write requests
+- Added write-enabled demo helpers for stock adjustment, expiry, PO draft creation, PO confirmation, and goods receiving
 - Built mobile-first Thai UI for:
   - Dashboard
   - Products
@@ -26,7 +26,7 @@
   - Stock Adjustment
   - Expiry Lots
   - System Status
-- Added safe confirmation flow for stock adjustment and expiry lot create
+- Added safe confirmation flow for stock adjustment, expiry lot create, PO creation, and goods receiving
 - Added `DEMO_PROGRESS.md`
 
 ## Live API endpoints connected
@@ -56,26 +56,52 @@
 - `GET /pos-dashboard/api/purchase-orders/:id/receiving-status`
 - `GET /pos-dashboard/api/goods-receiving`
 - `GET /pos-dashboard/api/goods-receiving/:id`
+- `POST /pos-dashboard/api/purchase-order-drafts`
+- `POST /pos-dashboard/api/purchase-order-drafts/:id/items`
+- `POST /pos-dashboard/api/purchase-order-drafts/:id/group-by-supplier`
+- `POST /pos-dashboard/api/purchase-order-drafts/:id/create-purchase-orders`
+- `POST /pos-dashboard/api/goods-receiving`
 - `GET /pos-dashboard/api/expiry/summary`
 - `GET /pos-dashboard/api/expiry?stock_id=`
 - `POST /pos-dashboard/api/expiry`
 - `GET /pos-dashboard/api/product-suppliers?stock_id=`
+
+## Live write verification
+
+- Stock adjustment product: `00001111` (`BO WAGU`)
+- Before stock: `10`
+- Increase: `+1` via `POST /stock/direct-adjust`
+- After increase: `11`
+- Decrease: `-2` via `POST /stock/direct-adjust`
+- After decrease: `9`
+- Expiry lot create:
+  - `stock_id`: `00001111`
+  - `batch_no`: `BL-DEMO-0001`
+  - `expiry_date`: `2026-07-31`
+  - `qty`: `1`
+- PO/GR write verification:
+  - Product: `0000888` (`FROZEN SQUID EGGS MUC TRUNG`)
+  - Supplier mapping found: `GOLD STAR`
+  - Created draft `POD-20260601-0006`
+  - Created PO `PO-20260601-0001`
+  - Saved goods receipt `GR-20260601-0001`
 
 ## Still limited / not exposed
 
 - Historical sales date ranges are not exposed by the current connector
 - Vendor create/edit flows are not wired
 - Goods receiving is read-only in the demo UI
-- Demo read-only mode prevents POST writes to `/stock/direct-adjust` and `/expiry`
 - Android SDK installed locally at `/home/april/projects/android-sdk`
 - Android debug APK builds successfully in this environment
+- Demo APK is built with `DEMO_READ_ONLY=false`
 
 ## Env setup
 
 - Copy `.env.example` to `.env`
 - Set `API_BASE_URL`
 - Set `API_TOKEN` only if the backend requires it
-- Keep `DEMO_READ_ONLY=true` for demo runs
+- Set `DEMO_READ_ONLY=false` for full-function demo runs
+- Set `DEMO_READ_ONLY=true` only when you want the safety mode
 
 ## Run
 
@@ -97,10 +123,10 @@
 
 - Local git repo initialized in `/home/april/projects/openclaw-pos-bigluna`
 - Initial commit created: `46de0fb` (`Initial Big Luna POS demo app`)
-- Latest commit for this round: `ef0cd1a` (`Harden demo read-only mode`)
-- Working tree is clean after commit
+- Latest commit for this round: pending final commit after full-function changes
+- Working tree has pending local changes for this round
 
 ## Next step
 
-- If the live backend needs auth, populate `API_TOKEN` locally and re-test Products / Barcode Scan / Inventory / Sales
+- If the live backend needs auth, populate `API_TOKEN` locally and re-test the app with `DEMO_READ_ONLY=false`
 - Copy the debug APK to the demo device or install it with `adb install -r build/app/outputs/flutter-apk/app-debug.apk`

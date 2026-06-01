@@ -39,32 +39,46 @@ class AppFrame extends StatelessWidget {
         child: SafeArea(
           child: Column(
             children: [
-              if (AppServices.config.demoReadOnly)
-                Container(
-                  width: double.infinity,
-                  margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.errorContainer,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: Theme.of(context).colorScheme.error.withValues(alpha: 0.35)),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(Icons.lock_rounded, color: Theme.of(context).colorScheme.onErrorContainer),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          'โหมด Demo: ปิดการบันทึกข้อมูลจริง',
-                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                fontWeight: FontWeight.w700,
-                                color: Theme.of(context).colorScheme.onErrorContainer,
-                              ),
-                        ),
-                      ),
-                    ],
+              Container(
+                width: double.infinity,
+                margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppServices.config.demoReadOnly
+                      ? Theme.of(context).colorScheme.errorContainer
+                      : Theme.of(context).colorScheme.primaryContainer,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: AppServices.config.demoReadOnly
+                        ? Theme.of(context).colorScheme.error.withValues(alpha: 0.35)
+                        : Theme.of(context).colorScheme.primary.withValues(alpha: 0.35),
                   ),
                 ),
+                child: Row(
+                  children: [
+                    Icon(
+                      AppServices.config.demoReadOnly ? Icons.lock_rounded : Icons.check_circle_rounded,
+                      color: AppServices.config.demoReadOnly
+                          ? Theme.of(context).colorScheme.onErrorContainer
+                          : Theme.of(context).colorScheme.onPrimaryContainer,
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        AppServices.config.demoReadOnly
+                            ? 'โหมด Demo: ปิดการบันทึกข้อมูลจริง'
+                            : 'POS Test Environment — เปิดใช้งานการบันทึกข้อมูลจริง',
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              fontWeight: FontWeight.w700,
+                              color: AppServices.config.demoReadOnly
+                                  ? Theme.of(context).colorScheme.onErrorContainer
+                                  : Theme.of(context).colorScheme.onPrimaryContainer,
+                            ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
               Expanded(child: child),
             ],
           ),

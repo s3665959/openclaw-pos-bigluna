@@ -282,6 +282,74 @@ class OpenClawApi {
     return rows.map(PurchaseOrderRecord.fromJson).toList(growable: false);
   }
 
+  Future<Map<String, dynamic>> createPurchaseOrderDraft({
+    String notes = 'Purchase request from Big Luna POS',
+  }) async {
+    _ensureWriteEnabled();
+    final response = await _request(
+      '/purchase-order-drafts',
+      method: 'POST',
+      data: {
+        'notes': notes,
+        'created_by': 'big-luna-mobile',
+      },
+    );
+    return _asMap(response.data);
+  }
+
+  Future<Map<String, dynamic>> getPurchaseOrderDraft(String draftId) => _getMap('/purchase-order-drafts/${Uri.encodeComponent(draftId)}');
+
+  Future<Map<String, dynamic>> addPurchaseOrderDraftItem(
+    String draftId,
+    Map<String, dynamic> input,
+  ) async {
+    _ensureWriteEnabled();
+    final response = await _request(
+      '/purchase-order-drafts/${Uri.encodeComponent(draftId)}/items',
+      method: 'POST',
+      data: input,
+    );
+    return _asMap(response.data);
+  }
+
+  Future<Map<String, dynamic>> groupPurchaseOrderDraftBySupplier(String draftId) async {
+    _ensureWriteEnabled();
+    final response = await _request(
+      '/purchase-order-drafts/${Uri.encodeComponent(draftId)}/group-by-supplier',
+      method: 'POST',
+    );
+    return _asMap(response.data);
+  }
+
+  Future<Map<String, dynamic>> createPurchaseOrdersFromDraft(
+    String draftId, {
+    String? notes,
+  }) async {
+    _ensureWriteEnabled();
+    final response = await _request(
+      '/purchase-order-drafts/${Uri.encodeComponent(draftId)}/create-purchase-orders',
+      method: 'POST',
+      data: {
+        if (notes != null && notes.trim().isNotEmpty) 'notes': notes.trim(),
+        'idempotency_key': 'big-luna-${DateTime.now().millisecondsSinceEpoch}',
+      },
+    );
+    return _asMap(response.data);
+  }
+
+  Future<Map<String, dynamic>> repairMissingPurchaseOrdersFromDraft(String draftId, {String? notes}) async {
+    _ensureWriteEnabled();
+    final response = await _request(
+      '/purchase-order-drafts/${Uri.encodeComponent(draftId)}/repair-missing-purchase-orders',
+      method: 'POST',
+      data: {
+        if (notes != null && notes.trim().isNotEmpty) 'notes': notes.trim(),
+        'idempotency_key': 'big-luna-${DateTime.now().millisecondsSinceEpoch}',
+      },
+    );
+    return _asMap(response.data);
+  }
+
   Future<Map<String, dynamic>> getPurchaseOrder(String orderId) => _getMap('/purchase-orders/${Uri.encodeComponent(orderId)}');
 
   Future<Map<String, dynamic>> getPurchaseOrderReceivingStatus(String orderId) =>
@@ -299,6 +367,110 @@ class OpenClawApi {
 
   Future<Map<String, dynamic>> getGoodsReceipt(String receiptId) => _getMap('/goods-receiving/${Uri.encodeComponent(receiptId)}');
 
+  Future<Map<String, dynamic>> saveGoodsReceipt({
+    required String purchaseOrderId,
+    required List<Map<String, dynamic>> lines,
+    String receivedBy = 'big-luna-mobile',
+    String notes = '',
+    bool allowOverReceive = false,
+  }) async {
+    _ensureWriteEnabled();
+    final response = await _request(
+      '/goods-receiving',
+      method: 'POST',
+      data: {
+        'purchase_order_id': purchaseOrderId,
+        'received_by': receivedBy,
+        'notes': notes,
+        'idempotency_key': 'big-luna-${DateTime.now().millisecondsSinceEpoch}',
+        'allow_over_receive': allowOverReceive,
+        'lines': lines,
+      },
+    );
+    return _asMap(response.data);
+  }
+
+  Future<Map<String, dynamic>> deletePurchaseOrder(String orderId) async {
+    _ensureWriteEnabled();
+    final response = await _request('/purchase-orders/${Uri.encodeComponent(orderId)}', method: 'DELETE');
+    return _asMap(response.data);
+  }
+
+  Future<Map<String, dynamic>> deleteGoodsReceiving(String receiptId) async {
+    _ensureWriteEnabled();
+    final response = await _request('/goods-receiving/${Uri.encodeComponent(receiptId)}', method: 'DELETE');
+    return _asMap(response.data);
+  }
+
+  Future<Map<String, dynamic>> createPurchaseOrderFromProduct(ProductRecord product) async {
+    _ensureWriteEnabled();
+    final supplierSummary = await getProductSupplierSummary(product.id).catchError((_) => <String, dynamic>{});
+    final defaultVendorId = supplierSummary['defaultSupplierId']?.toString().trim() ?? '';
+    final defaultVendorName = supplierSummary['defaultSupplierName']?.toString().trim() ?? '';
+    final draft = await createPurchaseOrderDraft(notes: 'Mobile demo request from Big Luna POS');
+    final draftId = draft['id']?.toString().trim() ?? '';
+    if (draftId.isEmpty) {
+      throw ApiException('Could not create purchase request draft.');
+    }
+    await addPurchaseOrderDraftItem(
+      draftId,
+      {
+        'stock_id': product.id,
+        'product_name_snapshot': product.name,
+        'barcode_snapshot': product.barcode,
+        'category_snapshot': product.category,
+        'current_stock_snapshot': product.stockQty.toString(),
+        'qty': 1,
+        'unit_cost': product.cost ?? product.price,
+        'selected_vendor_id': defaultVendorId,
+        'selected_vendor_name_snapshot': defaultVendorName.isNotEmpty ? defaultVendorName : product.vendor,
+        'notes': 'Created from mobile demo',
+      },
+    );
+    final grouped = await groupPurchaseOrderDraftBySupplier(draftId);
+    final response = await createPurchaseOrdersFromDraft(draftId, notes: 'Mobile demo PO create');
+    return {
+      'draft': grouped,
+      'response': response,
+      'supplier_summary': supplierSummary,
+    };
+  }
+
+  Future<Map<String, dynamic>> saveFullGoodsReceipt(String orderId) async {
+    _ensureWriteEnabled();
+    final data = await getPurchaseOrder(orderId);
+    final order = _asMap(data['order']);
+    final lines = (data['lines'] as List<dynamic>? ?? const <dynamic>[])
+        .whereType<Map>()
+        .map((row) => Map<String, dynamic>.from(row))
+        .toList(growable: false);
+    if (lines.isEmpty) {
+      throw ApiException('No purchase order lines available for receiving.');
+    }
+    final payloadLines = lines.map((line) {
+      final qty = _intValue(line['qty'] ?? line['ordered_qty'], fallback: 0);
+      return {
+        'purchase_order_line_id': line['id']?.toString() ?? line['purchase_order_line_id']?.toString() ?? '',
+        'stock_id': line['stock_id']?.toString() ?? '',
+        'product_name_snapshot': line['product_name_snapshot']?.toString() ?? '',
+        'ordered_qty': qty,
+        'received_qty': qty,
+        'damaged_qty': 0,
+        'accepted_qty': qty,
+        'unit_cost': line['unit_cost'],
+        'notes': 'Received from mobile demo',
+      };
+    }).toList(growable: false);
+    final response = await saveGoodsReceipt(
+      purchaseOrderId: order['id']?.toString() ?? orderId,
+      receivedBy: 'big-luna-mobile',
+      notes: 'Mobile demo receiving',
+      lines: payloadLines,
+      allowOverReceive: false,
+    );
+    return response;
+  }
+
   Future<List<ExpirySummaryItem>> getExpirySummary() async {
     final json = await _getMap('/expiry/summary');
     final rows = json['rows'] as List<dynamic>? ?? const <dynamic>[];
@@ -312,9 +484,7 @@ class OpenClawApi {
   }
 
   Future<ExpiryLotRecord> createExpiryLot(Map<String, dynamic> input) async {
-    if (isDemoReadOnly) {
-      throw ApiException('โหมด Demo: ปิดการบันทึกข้อมูลจริง');
-    }
+    _ensureWriteEnabled();
     final response = await _request(
       '/expiry',
       method: 'POST',
@@ -336,9 +506,7 @@ class OpenClawApi {
     required String reason,
     required String idempotencyKey,
   }) async {
-    if (isDemoReadOnly) {
-      throw ApiException('โหมด Demo: ปิดการบันทึกข้อมูลจริง');
-    }
+    _ensureWriteEnabled();
     final response = await _request(
       '/stock/direct-adjust',
       method: 'POST',
@@ -413,6 +581,7 @@ class OpenClawApi {
     if (rows is List && rows.isNotEmpty && rows.first is Map) {
       return Map<String, dynamic>.from(rows.first as Map);
     }
+    if (json['draft'] is Map) return Map<String, dynamic>.from(json['draft'] as Map);
     if (json['product'] is Map) return Map<String, dynamic>.from(json['product'] as Map);
     if (json['row'] is Map) return Map<String, dynamic>.from(json['row'] as Map);
     if (json['vendor'] is Map) return Map<String, dynamic>.from(json['vendor'] as Map);
@@ -430,5 +599,11 @@ class OpenClawApi {
       if (error.isNotEmpty) return error;
     }
     return fallback;
+  }
+
+  void _ensureWriteEnabled() {
+    if (isDemoReadOnly) {
+      throw ApiException('โหมด Demo: ปิดการบันทึกข้อมูลจริง');
+    }
   }
 }

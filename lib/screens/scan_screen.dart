@@ -122,7 +122,7 @@ class _ScanScreenState extends State<ScanScreen> {
                   children: [
                     Expanded(
                       child: FilledButton.icon(
-                        onPressed: _loading || AppServices.config.demoReadOnly ? null : () => _lookup(_manualController.text),
+                        onPressed: _loading ? null : () => _lookup(_manualController.text),
                         icon: const Icon(Icons.search_rounded),
                         label: const Text('ค้นหา'),
                       ),
@@ -176,6 +176,51 @@ class _ScanScreenState extends State<ScanScreen> {
                     onPressed: AppServices.config.demoReadOnly ? null : () => _openAdjustment(product),
                     icon: const Icon(Icons.swap_vert_rounded),
                     label: const Text('ปรับสต็อกจากรายการนี้'),
+                  ),
+                  const SizedBox(height: 8),
+                  FilledButton.tonalIcon(
+                    onPressed: AppServices.config.demoReadOnly
+                        ? null
+                        : () async {
+                            final confirm = await showDialog<bool>(
+                              context: context,
+                              builder: (dialogContext) {
+                                return AlertDialog(
+                                  title: const Text('ยืนยันการสร้าง PO demo'),
+                                  content: Text('จะสร้างใบสั่งซื้อสำหรับ ${product.name}'),
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () => Navigator.of(dialogContext).pop(false),
+                                      child: const Text('ยกเลิก'),
+                                    ),
+                                    FilledButton(
+                                      onPressed: () => Navigator.of(dialogContext).pop(true),
+                                      child: const Text('ยืนยัน'),
+                                    ),
+                                  ],
+                                );
+                              },
+                            );
+                            if (confirm != true) return;
+                            try {
+                              final response = await AppServices.api.createPurchaseOrderFromProduct(product);
+                              final orders = (response['response'] as Map?)?['orders'] as List<dynamic>? ?? const <dynamic>[];
+                              final poNos = orders.whereType<Map>().map((row) => row['po_no']?.toString() ?? row['poNo']?.toString() ?? '').where((value) => value.isNotEmpty).toList(growable: false);
+                              if (!context.mounted) return;
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(poNos.isEmpty ? 'สร้าง PO demo สำเร็จ' : 'สร้าง PO demo สำเร็จ: ${poNos.join(', ')}'),
+                                ),
+                              );
+                            } catch (error) {
+                              if (!context.mounted) return;
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text(error.toString())),
+                              );
+                            }
+                          },
+                    icon: const Icon(Icons.local_shipping_rounded),
+                    label: const Text('สร้าง PO demo'),
                   ),
                   if (AppServices.config.demoReadOnly)
                     const Padding(

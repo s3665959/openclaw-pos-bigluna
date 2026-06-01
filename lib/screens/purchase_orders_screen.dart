@@ -95,6 +95,50 @@ class _PurchaseOrdersScreenState extends State<PurchaseOrdersScreen> {
                             ],
                           ),
                   ),
+                  const SizedBox(height: 12),
+                  FilledButton.icon(
+                    onPressed: AppServices.config.demoReadOnly
+                        ? null
+                        : () async {
+                            final confirm = await showDialog<bool>(
+                              context: context,
+                              builder: (dialogContext) {
+                                return AlertDialog(
+                                  title: const Text('ยืนยันการรับสินค้า'),
+                                  content: Text('จะบันทึกรับสินค้าทั้งหมดสำหรับ ${order.poNo}'),
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () => Navigator.of(dialogContext).pop(false),
+                                      child: const Text('ยกเลิก'),
+                                    ),
+                                    FilledButton(
+                                      onPressed: () => Navigator.of(dialogContext).pop(true),
+                                      child: const Text('ยืนยัน'),
+                                    ),
+                                  ],
+                                );
+                              },
+                            );
+                            if (confirm != true) return;
+                            try {
+                              final response = await AppServices.api.saveFullGoodsReceipt(order.id);
+                              if (!context.mounted) return;
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text('บันทึกรับสินค้าเรียบร้อย: ${response['receipt']?['receipt_no'] ?? response['receipt']?['receiptNo'] ?? 'สำเร็จ'}'),
+                                ),
+                              );
+                              await _refresh();
+                            } catch (error) {
+                              if (!context.mounted) return;
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text(error.toString())),
+                              );
+                            }
+                          },
+                    icon: const Icon(Icons.inventory_2_rounded),
+                    label: const Text('รับสินค้าทั้งหมด'),
+                  ),
                 ],
               );
             },
@@ -123,7 +167,7 @@ class _PurchaseOrdersScreenState extends State<PurchaseOrdersScreen> {
               subtitle: 'อ่านจาก /purchase-orders และ /purchase-orders/:id',
               child: Column(
                 children: [
-                  const InfoPill(label: 'Read-only demo'),
+                  InfoPill(label: AppServices.config.demoReadOnly ? 'Read-only mode' : 'Write enabled'),
                   const SizedBox(height: 12),
                   FutureBuilder<List<PurchaseOrderRecord>>(
                     future: _future,
