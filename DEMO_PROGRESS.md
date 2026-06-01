@@ -87,6 +87,12 @@
 - `flutter build apk --debug`: blocked by missing Android SDK
 - `flutter build web`: passed
 
+## Git
+
+- Local git repo initialized in `/home/april/projects/openclaw-pos-bigluna`
+- Initial commit created: `46de0fb` (`Initial Big Luna POS demo app`)
+- Working tree is clean
+
 ## Next step
 
 - Install Android SDK on this machine, then rerun `flutter build apk --debug`
