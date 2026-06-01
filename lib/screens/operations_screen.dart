@@ -265,10 +265,15 @@ class _OperationsScreenState extends State<OperationsScreen> {
                     ),
                     const SizedBox(height: 12),
                     FilledButton.icon(
-                      onPressed: _busy ? null : _submitAdjustment,
+                      onPressed: _busy || AppServices.config.demoReadOnly ? null : _submitAdjustment,
                       icon: const Icon(Icons.save_rounded),
                       label: const Text('ส่งคำขอปรับสต็อก'),
                     ),
+                    if (AppServices.config.demoReadOnly)
+                      const Padding(
+                        padding: EdgeInsets.only(top: 8),
+                        child: Text('โหมด Demo: ปิดการบันทึกข้อมูลจริง'),
+                      ),
                     if (_qtyActionMessage.isNotEmpty) ...[
                       const SizedBox(height: 12),
                       Text(_qtyActionMessage),
@@ -326,13 +331,18 @@ class _OperationsScreenState extends State<OperationsScreen> {
                         const SizedBox(width: 12),
                         Expanded(
                           child: FilledButton.icon(
-                            onPressed: _busy ? null : _submitExpiryLot,
+                            onPressed: _busy || AppServices.config.demoReadOnly ? null : _submitExpiryLot,
                             icon: const Icon(Icons.save_rounded),
                             label: const Text('บันทึก lot'),
                           ),
                         ),
                       ],
                     ),
+                    if (AppServices.config.demoReadOnly)
+                      const Padding(
+                        padding: EdgeInsets.only(top: 8),
+                        child: Text('โหมด Demo: ปิดการบันทึกข้อมูลจริง'),
+                      ),
                     if (_expiryMessage.isNotEmpty) ...[
                       const SizedBox(height: 12),
                       Text(_expiryMessage),

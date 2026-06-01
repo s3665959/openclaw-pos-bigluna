@@ -122,7 +122,7 @@ class _ScanScreenState extends State<ScanScreen> {
                   children: [
                     Expanded(
                       child: FilledButton.icon(
-                        onPressed: _loading ? null : () => _lookup(_manualController.text),
+                        onPressed: _loading || AppServices.config.demoReadOnly ? null : () => _lookup(_manualController.text),
                         icon: const Icon(Icons.search_rounded),
                         label: const Text('ค้นหา'),
                       ),
@@ -173,10 +173,15 @@ class _ScanScreenState extends State<ScanScreen> {
                   KeyValueRow(label: 'ต้นทุน', value: product.cost == null ? '-' : formatMoney(product.cost!)),
                   const SizedBox(height: 12),
                   FilledButton.icon(
-                    onPressed: () => _openAdjustment(product),
+                    onPressed: AppServices.config.demoReadOnly ? null : () => _openAdjustment(product),
                     icon: const Icon(Icons.swap_vert_rounded),
                     label: const Text('ปรับสต็อกจากรายการนี้'),
                   ),
+                  if (AppServices.config.demoReadOnly)
+                    const Padding(
+                      padding: EdgeInsets.only(top: 8),
+                      child: Text('โหมด Demo: ปิดการบันทึกข้อมูลจริง'),
+                    ),
                 ],
               ),
             )

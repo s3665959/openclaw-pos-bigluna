@@ -4,19 +4,40 @@ class AppConfig {
   const AppConfig({
     required this.apiBaseUrl,
     required this.apiToken,
+    required this.demoReadOnly,
   });
 
   final String apiBaseUrl;
   final String apiToken;
+  final bool demoReadOnly;
 
   factory AppConfig.fromEnv() {
-    final rawBaseUrl = dotenv.env['API_BASE_URL']?.trim() ?? '';
-    final rawToken = dotenv.env['API_TOKEN']?.trim() ?? '';
+    final rawBaseUrl = _env('API_BASE_URL');
+    final rawToken = _env('API_TOKEN');
+    final rawDemoReadOnly = _env('DEMO_READ_ONLY');
     final apiBaseUrl = rawBaseUrl.isEmpty ? 'https://openclaw.ganseeds.com' : rawBaseUrl;
+    final demoReadOnly = rawDemoReadOnly.isEmpty ? true : _parseBool(rawDemoReadOnly, fallback: true);
 
     return AppConfig(
       apiBaseUrl: apiBaseUrl.endsWith('/') ? apiBaseUrl.substring(0, apiBaseUrl.length - 1) : apiBaseUrl,
       apiToken: rawToken,
+      demoReadOnly: demoReadOnly,
     );
   }
+}
+
+String _env(String key) {
+  try {
+    return dotenv.env[key]?.trim() ?? '';
+  } catch (_) {
+    return '';
+  }
+}
+
+bool _parseBool(String raw, {required bool fallback}) {
+  final value = raw.trim().toLowerCase();
+  if (value.isEmpty) return fallback;
+  if (value == 'true' || value == '1' || value == 'yes' || value == 'y' || value == 'on') return true;
+  if (value == 'false' || value == '0' || value == 'no' || value == 'n' || value == 'off') return false;
+  return fallback;
 }

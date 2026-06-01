@@ -18,6 +18,7 @@ class ApiException implements Exception {
 class OpenClawApi {
   OpenClawApi({AppConfig? config}) {
     final effectiveConfig = config ?? AppConfig.fromEnv();
+    _config = effectiveConfig;
     final headers = <String, dynamic>{'accept': 'application/json'};
     if (effectiveConfig.apiToken.isNotEmpty) {
       headers['authorization'] = effectiveConfig.apiToken.toLowerCase().startsWith('bearer ')
@@ -53,6 +54,9 @@ class OpenClawApi {
   }
 
   late final Dio _dio;
+  late final AppConfig _config;
+
+  bool get isDemoReadOnly => _config.demoReadOnly;
 
   Future<Map<String, dynamic>> _getMap(String path, {Map<String, dynamic>? query}) async {
     final response = await _request(path, method: 'GET', query: query);
@@ -308,6 +312,9 @@ class OpenClawApi {
   }
 
   Future<ExpiryLotRecord> createExpiryLot(Map<String, dynamic> input) async {
+    if (isDemoReadOnly) {
+      throw ApiException('โหมด Demo: ปิดการบันทึกข้อมูลจริง');
+    }
     final response = await _request(
       '/expiry',
       method: 'POST',
@@ -329,6 +336,9 @@ class OpenClawApi {
     required String reason,
     required String idempotencyKey,
   }) async {
+    if (isDemoReadOnly) {
+      throw ApiException('โหมด Demo: ปิดการบันทึกข้อมูลจริง');
+    }
     final response = await _request(
       '/stock/direct-adjust',
       method: 'POST',

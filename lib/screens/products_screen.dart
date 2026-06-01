@@ -132,7 +132,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
                   ),
                   const SizedBox(height: 12),
                   FilledButton.icon(
-                    onPressed: detail.id.isEmpty
+                    onPressed: detail.id.isEmpty || AppServices.config.demoReadOnly
                         ? null
                         : () {
                             Navigator.of(context).pop();
@@ -250,6 +250,11 @@ class _ProductsScreenState extends State<ProductsScreen> {
                       ),
                     ],
                   ),
+                  if (AppServices.config.demoReadOnly)
+                    const Padding(
+                      padding: EdgeInsets.only(top: 8),
+                      child: Text('โหมด Demo: ปิดการบันทึกข้อมูลจริง'),
+                    ),
                 ],
               ),
             ),

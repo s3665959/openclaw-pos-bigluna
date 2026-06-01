@@ -175,7 +175,9 @@ class _InventoryScreenState extends State<InventoryScreen> {
                         Card(
                           elevation: 0,
                           child: ListTile(
-                            onTap: () => Navigator.of(context).push(
+                            onTap: AppServices.config.demoReadOnly
+                                ? null
+                                : () => Navigator.of(context).push(
                               MaterialPageRoute(
                                 builder: (_) => OperationsScreen(
                                   section: OperationsSection.stockAdjustment,
@@ -202,6 +204,11 @@ class _InventoryScreenState extends State<InventoryScreen> {
                         ),
                         const SizedBox(height: 8),
                       ],
+                    if (AppServices.config.demoReadOnly)
+                      const Padding(
+                        padding: EdgeInsets.only(top: 8),
+                        child: Text('โหมด Demo: ปิดการบันทึกข้อมูลจริง'),
+                      ),
                   ],
                 );
               },

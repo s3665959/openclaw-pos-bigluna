@@ -12,7 +12,9 @@ Future<void> main() async {
 }
 
 class BigLunaApp extends StatelessWidget {
-  const BigLunaApp({super.key});
+  const BigLunaApp({super.key, this.home});
+
+  final Widget? home;
 
   @override
   Widget build(BuildContext context) {
@@ -30,7 +32,7 @@ class BigLunaApp extends StatelessWidget {
         scaffoldBackgroundColor: const Color(0xFFF5F7FB),
         appBarTheme: const AppBarTheme(centerTitle: false),
       ),
-      home: const HomeScreen(),
+      home: home ?? const HomeScreen(),
     );
   }
 }

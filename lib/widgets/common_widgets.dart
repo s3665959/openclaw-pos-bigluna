@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../core/api/app_services.dart';
+
 class AppFrame extends StatelessWidget {
   const AppFrame({
     super.key,
@@ -34,7 +36,39 @@ class AppFrame extends StatelessWidget {
             end: Alignment.bottomCenter,
           ),
         ),
-        child: SafeArea(child: child),
+        child: SafeArea(
+          child: Column(
+            children: [
+              if (AppServices.config.demoReadOnly)
+                Container(
+                  width: double.infinity,
+                  margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.errorContainer,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: Theme.of(context).colorScheme.error.withValues(alpha: 0.35)),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.lock_rounded, color: Theme.of(context).colorScheme.onErrorContainer),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          'โหมด Demo: ปิดการบันทึกข้อมูลจริง',
+                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                fontWeight: FontWeight.w700,
+                                color: Theme.of(context).colorScheme.onErrorContainer,
+                              ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              Expanded(child: child),
+            ],
+          ),
+        ),
       ),
     );
   }

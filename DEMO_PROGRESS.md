@@ -1,6 +1,6 @@
 # Demo Progress
 
-- Timestamp: 2026-06-01 16:34 ICT
+- Timestamp: 2026-06-01 17:45 ICT
 - Flutter project path: `/home/april/projects/openclaw-pos-bigluna`
 - OpenClaw web/backend inspected:
   - `/home/april/pos-dashboard`
@@ -11,7 +11,9 @@
 - Created a standalone Flutter demo app named `openclaw_pos_bigluna`
 - Set app display name to `Big Luna POS`
 - Added `.env.example` and local `.env` loading via `flutter_dotenv`
+- Added `DEMO_READ_ONLY=true` safety gate for demo mode
 - Added Dio API client with optional bearer token support
+- Added demo read-only guard that blocks live write requests
 - Built mobile-first Thai UI for:
   - Dashboard
   - Products
@@ -64,13 +66,16 @@
 - Historical sales date ranges are not exposed by the current connector
 - Vendor create/edit flows are not wired
 - Goods receiving is read-only in the demo UI
-- Android APK build is blocked in this environment because the Android SDK is not installed
+- Demo read-only mode prevents POST writes to `/stock/direct-adjust` and `/expiry`
+- Android SDK installed locally at `/home/april/projects/android-sdk`
+- Android debug APK builds successfully in this environment
 
 ## Env setup
 
 - Copy `.env.example` to `.env`
 - Set `API_BASE_URL`
 - Set `API_TOKEN` only if the backend requires it
+- Keep `DEMO_READ_ONLY=true` for demo runs
 
 ## Run
 
@@ -78,22 +83,24 @@
 - `/home/april/projects/flutter-sdk/bin/flutter pub get`
 - `/home/april/projects/flutter-sdk/bin/flutter test`
 - `/home/april/projects/flutter-sdk/bin/flutter analyze`
-- `/home/april/projects/flutter-sdk/bin/flutter run`
+- `/home/april/projects/flutter-sdk/bin/flutter build apk --debug`
 
 ## Validation results
 
 - `flutter analyze`: passed
 - `flutter test`: passed
-- `flutter build apk --debug`: blocked by missing Android SDK
+- `flutter build apk --debug`: passed
 - `flutter build web`: passed
+- Debug APK output: `build/app/outputs/flutter-apk/app-debug.apk`
 
 ## Git
 
 - Local git repo initialized in `/home/april/projects/openclaw-pos-bigluna`
 - Initial commit created: `46de0fb` (`Initial Big Luna POS demo app`)
-- Working tree is clean
+- Latest commit before this update: `6492934` (`Update demo progress`)
+- Working tree has pending local changes for this round
 
 ## Next step
 
-- Install Android SDK on this machine, then rerun `flutter build apk --debug`
 - If the live backend needs auth, populate `API_TOKEN` locally and re-test Products / Barcode Scan / Inventory / Sales
+- Copy the debug APK to the demo device or install it with `adb install -r build/app/outputs/flutter-apk/app-debug.apk`
