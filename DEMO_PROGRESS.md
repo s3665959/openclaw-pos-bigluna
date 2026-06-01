@@ -97,8 +97,8 @@
 
 - Local git repo initialized in `/home/april/projects/openclaw-pos-bigluna`
 - Initial commit created: `46de0fb` (`Initial Big Luna POS demo app`)
-- Latest commit before this update: `6492934` (`Update demo progress`)
-- Working tree has pending local changes for this round
+- Latest commit for this round: `ef0cd1a` (`Harden demo read-only mode`)
+- Working tree is clean after commit
 
 ## Next step
 
