@@ -187,7 +187,7 @@ class OpenClawApi {
     try {
       final json = await _getMap('/barcode/lookup', query: {'code': clean});
       final row = _firstRow(json);
-      return row == null ? null : ProductRecord.fromJson(row);
+      return row == null ? null : ProductRecord.fromJson(await _mergeOpenClawSupplierCost(row, clean));
     } catch (_) {
       return null;
     }
@@ -201,7 +201,7 @@ class OpenClawApi {
     try {
       final json = await _getMap('/products/detail', query: {'q': clean});
       final row = _firstRow(json);
-      return row == null ? null : ProductRecord.fromJson(row);
+      return row == null ? null : ProductRecord.fromJson(await _mergeOpenClawSupplierCost(row, clean));
     } catch (_) {
       return null;
     }
@@ -236,7 +236,23 @@ class OpenClawApi {
       },
     );
     final row = _firstRow(_asMap(response.data));
-    return row == null ? null : ProductRecord.fromJson(row);
+    return row == null ? null : ProductRecord.fromJson(await _mergeOpenClawSupplierCost(row, stockId));
+  }
+
+  Future<Map<String, dynamic>> setDefaultProductSupplier(
+    String supplierId, {
+    String operator = 'big-luna-mobile',
+    String reason = 'Set default supplier linkage',
+  }) async {
+    final response = await _request(
+      '/product-suppliers/${Uri.encodeComponent(supplierId)}/default',
+      method: 'POST',
+      data: {
+        'operator': operator,
+        'reason': reason,
+      },
+    );
+    return _asMap(response.data);
   }
 
   Future<List<ProductRecord>> lowStockProducts() async => _loadProducts('/stock/low');
@@ -679,6 +695,36 @@ class OpenClawApi {
       return Map<String, dynamic>.from(data);
     }
     return <String, dynamic>{};
+  }
+
+  Future<Map<String, dynamic>> _mergeOpenClawSupplierCost(Map<String, dynamic> row, String stockId) async {
+    final normalizedStockId = stockId.trim().isEmpty
+        ? (row['StockId'] ?? row['stock_id'] ?? row['stockId'] ?? row['product_id'] ?? '').toString().trim()
+        : stockId.trim();
+    if (normalizedStockId.isEmpty) {
+      return row;
+    }
+
+    try {
+      final summary = await getProductSupplierSummary(normalizedStockId);
+      final defaultCostRaw = summary['defaultSupplierLastCost'] ?? summary['default_supplier_last_cost'];
+      final parsed = defaultCostRaw == null || defaultCostRaw.toString().trim().isEmpty || defaultCostRaw.toString().toUpperCase() == 'NULL'
+          ? null
+          : double.tryParse(defaultCostRaw.toString().replaceAll(',', '').trim());
+      if (parsed == null) {
+        return row;
+      }
+      final merged = Map<String, dynamic>.from(row);
+      merged['cost'] = parsed;
+      merged['cost_price'] = parsed;
+      merged['CostPrice'] = parsed;
+      merged['Cost'] = parsed;
+      merged['UnitCost'] = parsed;
+      merged['unit_cost'] = parsed;
+      return merged;
+    } catch (_) {
+      return row;
+    }
   }
 
   static int _intValue(dynamic value, {required int fallback}) {

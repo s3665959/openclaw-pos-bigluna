@@ -206,11 +206,14 @@ class _ProductActionsSheetState extends State<ProductActionsSheet> {
       _supplierRows = await api.getProductSuppliers(_product.id);
       _supplierSummary = await api.getProductSupplierSummary(_product.id).catchError((_) => <String, dynamic>{});
       final defaultSupplier = _supplierSummary?['defaultSupplierName']?.toString().trim() ?? '';
+      final defaultSupplierCost = _supplierSummary?['defaultSupplierLastCost'] ?? _supplierSummary?['default_supplier_last_cost'];
       _supplierNameController.text = defaultSupplier.isNotEmpty ? defaultSupplier : '';
       _vendorIdController.clear();
       _vendorCodeController.clear();
       _vendorContactController.clear();
-      _lastCostController.clear();
+      _lastCostController.text = defaultSupplierCost == null || defaultSupplierCost.toString().trim().isEmpty || defaultSupplierCost.toString().toUpperCase() == 'NULL'
+          ? ''
+          : defaultSupplierCost.toString();
       _priorityController.text = '0';
       _supplierNotesController.clear();
       _editingSupplierId = null;
@@ -223,6 +226,12 @@ class _ProductActionsSheetState extends State<ProductActionsSheet> {
         });
       }
     }
+  }
+
+  String _cleanVendorField(Object? value) {
+    final text = value?.toString().trim() ?? '';
+    if (text.toUpperCase() == 'NULL') return '';
+    return text;
   }
 
   Future<void> _loadExpiry() async {
@@ -366,15 +375,8 @@ class _ProductActionsSheetState extends State<ProductActionsSheet> {
       });
       if (mounted) Navigator.of(context).pop(true);
     } catch (error) {
-      final errorText = error.toString();
-      if (errorText.contains('default_vendor_cost_not_found')) {
-        setState(() {
-          _error = 'The backend still does not have a default vendor cost row for this product. Save the default supplier record first, then retry product edit.';
-        });
-        return;
-      }
       setState(() {
-        _error = errorText;
+        _error = error.toString();
       });
     } finally {
       if (mounted) {
@@ -530,6 +532,14 @@ class _ProductActionsSheetState extends State<ProductActionsSheet> {
         await AppServices.api.updateProductSupplier(_editingSupplierId!, payload);
       }
       await _loadSuppliers();
+      final summary = _supplierSummary ?? const <String, dynamic>{};
+      final verifiedDefaultSupplier = summary['defaultSupplierId']?.toString().trim() ?? summary['default_supplier_id']?.toString().trim() ?? '';
+      if (payload['is_default'] == true && verifiedDefaultSupplier.isEmpty) {
+        setState(() {
+          _error = 'The backend did not confirm the default supplier in OpenClaw. Retry the default supplier save.';
+        });
+        return;
+      }
       setState(() {
         _message = 'Supplier saved successfully';
       });
@@ -927,6 +937,7 @@ class _ProductActionsSheetState extends State<ProductActionsSheet> {
   }
 
   Widget _buildSuppliers(BuildContext context) {
+    final defaultSupplierName = _supplierSummary?['defaultSupplierName']?.toString().trim() ?? _supplierSummary?['default_supplier_name']?.toString().trim() ?? '';
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -939,6 +950,14 @@ class _ProductActionsSheetState extends State<ProductActionsSheet> {
                 controller: _vendorSearchController,
                 decoration: const InputDecoration(labelText: 'Search vendor', hintText: 'Vendor name or code'),
                 onChanged: _searchVendors,
+              ),
+              const SizedBox(height: 8),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  'OpenClaw default supplier: ${defaultSupplierName.isNotEmpty ? defaultSupplierName : 'None set'}',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
               ),
               if (_vendorSearchError.isNotEmpty) ...[
                 const SizedBox(height: 8),
@@ -1021,7 +1040,8 @@ class _ProductActionsSheetState extends State<ProductActionsSheet> {
                                   const SizedBox(height: 4),
                                   Text('Vendor: ${row['vendor_name_snapshot']?.toString() ?? row['vendorNameSnapshot']?.toString() ?? ''}'),
                                   Text('Code: ${row['vendor_code']?.toString() ?? row['vendorCode']?.toString() ?? ''}'),
-                                  Text('Default: ${row['is_default'] == true || row['isDefault'] == true ? 'Yes' : 'No'}'),
+                                  Text('OpenClaw default: ${_isOpenClawDefault(row) ? 'Yes' : 'No'}'),
+                                  Text('Last cost: ${row['last_cost']?.toString() ?? row['lastCost']?.toString() ?? '—'}'),
                                   Text('Priority: ${row['priority']?.toString() ?? '0'}'),
                                   if ((row['notes']?.toString() ?? '').isNotEmpty) Text('Notes: ${row['notes']}'),
                                   const SizedBox(height: 8),
@@ -1042,6 +1062,13 @@ class _ProductActionsSheetState extends State<ProductActionsSheet> {
         ),
       ],
     );
+  }
+
+  bool _isOpenClawDefault(Map<String, dynamic> row) {
+    final rowId = _cleanVendorField(row['id']);
+    final summaryDefaultId = _cleanVendorField(_supplierSummary?['defaultSupplierId'] ?? _supplierSummary?['default_supplier_id']);
+    final relationDefault = row['is_default'] == true || row['isDefault'] == true;
+    return relationDefault || (rowId.isNotEmpty && rowId == summaryDefaultId);
   }
 
   Widget _buildExpiry(BuildContext context) {
