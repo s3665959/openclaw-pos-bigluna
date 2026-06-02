@@ -8,6 +8,12 @@ import '../models/pos_models.dart';
 import '../widgets/common_widgets.dart';
 import '../widgets/product_actions_sheet.dart';
 
+String _formatProductPriceLine(ProductRecord product) {
+  final costText = product.cost == null ? '-' : formatMoney(product.cost!);
+  final retailText = formatMoney(product.price);
+  return 'Cost: $costText / Retail Price: $retailText';
+}
+
 class ProductsScreen extends StatefulWidget {
   const ProductsScreen({super.key});
 
@@ -229,8 +235,8 @@ class _ProductsScreenState extends State<ProductsScreen> {
                           subtitle: Padding(
                             padding: const EdgeInsets.only(top: 4),
                             child: Text(
-                              '${product.barcode} • ${product.vendor}\n${product.category}',
-                              maxLines: 2,
+                              '${product.barcode}\n${_formatProductPriceLine(product)}\n${product.category}',
+                              maxLines: 3,
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),

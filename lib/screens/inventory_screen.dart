@@ -7,6 +7,12 @@ import '../l10n/app_localizations.dart';
 import '../widgets/common_widgets.dart';
 import 'operations_screen.dart';
 
+String _formatProductPriceLine(ProductRecord product) {
+  final costText = product.cost == null ? '-' : formatMoney(product.cost!);
+  final retailText = formatMoney(product.price);
+  return 'Cost: $costText / Retail Price: $retailText';
+}
+
 class InventoryScreen extends StatefulWidget {
   const InventoryScreen({super.key});
 
@@ -221,7 +227,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
                               ),
                             ),
                             title: Text(product.name, style: const TextStyle(fontWeight: FontWeight.w700)),
-                            subtitle: Text('${product.id} • ${product.vendor}\n${product.category}'),
+                            subtitle: Text('${product.id}\n${_formatProductPriceLine(product)}\n${product.category}'),
                             isThreeLine: true,
                             trailing: Column(
                               mainAxisAlignment: MainAxisAlignment.center,
