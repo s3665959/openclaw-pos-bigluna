@@ -300,11 +300,6 @@ class _OperationsScreenState extends State<OperationsScreen> {
                       icon: const Icon(Icons.save_rounded),
                       label: const Text('Submit adjustment'),
                     ),
-                    if (AppServices.config.demoReadOnly)
-                      const Padding(
-                        padding: EdgeInsets.only(top: 8),
-                        child: Text('Demo Mode: Real data changes are disabled'),
-                      ),
                     if (_qtyActionMessage.isNotEmpty) ...[
                       const SizedBox(height: 12),
                       Text(_qtyActionMessage),
@@ -379,11 +374,6 @@ class _OperationsScreenState extends State<OperationsScreen> {
                         ),
                       ],
                     ),
-                    if (AppServices.config.demoReadOnly)
-                      const Padding(
-                        padding: EdgeInsets.only(top: 8),
-                        child: Text('Demo Mode: Real data changes are disabled'),
-                      ),
                     if (_expiryMessage.isNotEmpty) ...[
                       const SizedBox(height: 12),
                       Text(_expiryMessage),

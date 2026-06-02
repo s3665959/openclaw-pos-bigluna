@@ -179,11 +179,6 @@ class _ProductsScreenState extends State<ProductsScreen> {
                       ),
                     ],
                   ),
-                  if (AppServices.config.demoReadOnly)
-                    const Padding(
-                      padding: EdgeInsets.only(top: 8),
-                      child: Text('Demo Mode: Real data changes are disabled'),
-                    ),
                 ],
               ),
             ),

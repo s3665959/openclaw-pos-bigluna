@@ -40,8 +40,6 @@ class AppLocalizations {
   String get settings => isVietnamese ? 'Cài đặt' : 'Settings';
   String get english => isVietnamese ? 'English' : 'English';
   String get vietnamese => isVietnamese ? 'Tiếng Việt' : 'Tiếng Việt';
-  String get demoModeDisabledBanner => isVietnamese ? 'Chế độ demo - Đã tắt thay đổi dữ liệu thực' : 'Demo Mode — Real data changes are disabled';
-  String get demoModeEnabledBanner => isVietnamese ? 'Môi trường POS thử nghiệm - Đã bật ghi dữ liệu thực' : 'POS Test Environment — Real data changes enabled';
   String get loading => isVietnamese ? 'Đang tải...' : 'Loading...';
   String get loadingDashboard => isVietnamese ? 'Đang tải Big Luna POS...' : 'Loading Big Luna POS...';
   String get loadingStatus => isVietnamese ? 'Đang kiểm tra trạng thái...' : 'Checking system status...';

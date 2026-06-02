@@ -242,11 +242,6 @@ class _InventoryScreenState extends State<InventoryScreen> {
                         ),
                         const SizedBox(height: 8),
                       ],
-                    if (AppServices.config.demoReadOnly)
-                      const Padding(
-                        padding: EdgeInsets.only(top: 8),
-                        child: Text('Demo Mode: Real data changes are disabled'),
-                      ),
                   ],
                 );
               },

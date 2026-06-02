@@ -31,6 +31,7 @@
 - The corrected POS connector now exposes raw product cost as `dbo.StockItems.LastOrderPrice`, so Edit Product prefills from `pos_expected_cost` and preserves `openclaw_supplier_last_cost` as a separate supplier reference.
 - The runtime product detail/update flow now returns raw POS cost and supplier cost independently, so the UI no longer falls back to `0` when `pos_expected_cost` is present.
 - False `pos_expected_cost_update_failed` warnings are now suppressed in the mobile client when the returned `pos_expected_cost` already matches the submitted cost.
+- The shared environment banner and related visible test-environment notices were removed from all app screens without changing write-enabled behavior or localization support.
 
 ## Completed
 
@@ -182,6 +183,7 @@
   - Products and Inventory list cards now show `Cost / Retail Price` instead of the old vendor/`Unknown` compact subtitle.
   - Home screen is now simplified to four primary cards only: Scan Barcode, Products, Sales, and System Status.
   - Launcher icons were updated from the provided `/home/april/projects/icon` asset set.
+  - The shared environment banner and per-screen demo-mode warning text were removed from visible UI while keeping write actions enabled with `DEMO_READ_ONLY=false`.
 - Android SDK is installed at `/home/april/projects/android-sdk`
 - `JAVA_HOME` must point to `/home/april/projects/java-17` for Android builds in this shell
 - No Android device was attached when checking `adb devices`, so I could not capture a fresh on-device screenshot from this environment

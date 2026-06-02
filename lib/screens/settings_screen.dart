@@ -44,14 +44,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
           const SizedBox(height: 12),
           SectionCard(
-            title: 'Demo mode',
-            subtitle: AppServices.config.demoReadOnly
-                ? l10n.demoModeDisabledBanner
-                : l10n.demoModeEnabledBanner,
+            title: 'Write actions',
+            subtitle: 'This screen only reports the current write access state.',
             child: Text(
               AppServices.config.demoReadOnly
                   ? 'Write actions are blocked.'
-                  : 'Write actions are enabled for the POS test environment.',
+                  : 'Write actions are enabled.',
             ),
           ),
         ],
