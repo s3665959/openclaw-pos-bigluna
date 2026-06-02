@@ -187,6 +187,19 @@
 - No Android device was attached when checking `adb devices`, so I could not capture a fresh on-device screenshot from this environment
 - No backup, snapshot, reset, or rollback was performed
 - No changes were made to `/home/april/pos-dashboard` or `/home/april/projects/openclaw-pos-platform`
+- Added daily gross profit reporting to Sales using the shared OpenClaw endpoint `GET /pos-dashboard/api/sales/profit-report?date=YYYY-MM-DD`
+- Cost basis for the new report:
+  - No historical cost per sale line is exposed by the live POS sales endpoints or archive item rows
+  - Gross profit therefore uses current POS product cost (`pos_expected_cost` / `dbo.StockItems.LastOrderPrice`) with OpenClaw supplier last-cost fallback when the POS cost is unavailable
+- Verified report output on live/public API:
+  - `2026-06-02`: Total Sales `2884.15`, COGS `390.87`, Gross Profit `2493.28`, Gross Margin `86.45%`, Orders `208`
+  - `2026-06-01`: Total Sales `1904.24`, COGS `483.20`, Gross Profit `1421.04`, Gross Margin `74.63%`, Orders `158`
+- Flutter Sales screen now:
+  - Loads a selected-date gross profit report from the shared backend
+  - Shows summary cards for Total Sales, Gross Profit, Gross Margin, Orders, Items Sold, COGS, and Average Order Value
+  - Shows Top Products by Profit, Top Products by Quantity Sold, and Low / Negative Profit Items
+  - Uses Australian dollar formatting (`A$`)
+  - Keeps the Today shortcut, date picker, loading state, empty state, retry, and API error handling
 
 ## Git
 

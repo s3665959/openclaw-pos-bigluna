@@ -400,6 +400,13 @@ class OpenClawApi {
 
   Future<List<Map<String, dynamic>>> getTopProductsToday() => _getRows('/sales/top-products/today');
 
+  Future<SalesProfitReport> getSalesProfitReport(DateTime date) async {
+    final isoDate =
+        '${date.year.toString().padLeft(4, '0')}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+    final json = await _getMap('/sales/profit-report', query: {'date': isoDate});
+    return SalesProfitReport.fromJson(json);
+  }
+
   Future<List<Map<String, dynamic>>> listArchiveRuns({
     int limit = 90,
     String? month,

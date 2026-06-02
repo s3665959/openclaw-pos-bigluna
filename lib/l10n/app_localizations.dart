@@ -76,6 +76,37 @@ class AppLocalizations {
   String get noLots => isVietnamese ? 'Chưa có lô' : 'No lots';
   String get noPo => isVietnamese ? 'Chưa có PO' : 'No purchase orders';
   String get noProducts => isVietnamese ? 'Không có sản phẩm' : 'No products';
+  String get grossProfit => isVietnamese ? 'Lợi nhuận gộp' : 'Gross Profit';
+  String get grossMargin => isVietnamese ? 'Biên lợi nhuận gộp' : 'Gross Margin';
+  String get orders => isVietnamese ? 'Đơn hàng' : 'Orders';
+  String get itemsSold => isVietnamese ? 'Số lượng bán' : 'Items Sold';
+  String get cogs => isVietnamese ? 'Giá vốn' : 'COGS';
+  String get averageOrderValue => isVietnamese ? 'Giá trị đơn trung bình' : 'Average Order Value';
+  String get topProductsByProfit => isVietnamese ? 'Sản phẩm lợi nhuận cao' : 'Top Products by Profit';
+  String get topProductsByQuantity => isVietnamese ? 'Sản phẩm bán chạy' : 'Top Products by Quantity Sold';
+  String get lowOrNegativeProfitItems => isVietnamese ? 'Sản phẩm lãi thấp hoặc âm' : 'Low / Negative Profit Items';
+  String get pickDate => isVietnamese ? 'Chọn ngày' : 'Pick date';
+  String get today => isVietnamese ? 'Hôm nay' : 'Today';
+  String get noSalesData => isVietnamese ? 'Không có dữ liệu bán hàng' : 'No sales data';
+  String get salesProfitReport => isVietnamese ? 'Báo cáo lợi nhuận gộp' : 'Gross Profit Report';
+  String get selectedBusinessDate => isVietnamese ? 'Ngày kinh doanh đã chọn' : 'Selected business date';
+  String get historicalCostBasisNote => isVietnamese
+      ? 'Lợi nhuận lịch sử dùng giá vốn hiện tại từ POS khi dòng bán không có giá vốn tại thời điểm bán.'
+      : 'Historical profit uses the current POS product cost when sale-line historical cost is not available.';
+  String get salesReportRetry => isVietnamese ? 'Tải lại báo cáo' : 'Retry report';
+  String get cost => isVietnamese ? 'Giá vốn' : 'Cost';
+  String get retailPrice => isVietnamese ? 'Giá bán lẻ' : 'Retail Price';
+  String get quantity => isVietnamese ? 'Số lượng' : 'Quantity';
+  String get margin => isVietnamese ? 'Biên lợi nhuận' : 'Margin';
+  String get totalSales => isVietnamese ? 'Tổng doanh thu' : 'Total Sales';
+  String get dailyBusinessReview => isVietnamese ? 'Xem nhanh kết quả kinh doanh theo ngày' : 'Daily business review';
+  String get liveToday => isVietnamese ? 'Dữ liệu hôm nay' : 'Live today';
+  String get archiveSource => isVietnamese ? 'Dữ liệu lưu trữ' : 'Archive';
+  String get unknownSource => isVietnamese ? 'Nguồn không rõ' : 'Unknown source';
+  String get noRankedProducts => isVietnamese ? 'Chưa có xếp hạng sản phẩm' : 'No ranked products';
+  String get noQuantityAnalysis => isVietnamese ? 'Chưa có phân tích số lượng' : 'No quantity analysis';
+  String get noLowMarginItems => isVietnamese ? 'Không có sản phẩm lãi thấp' : 'No low-margin items';
+  String get allAboveMarginThreshold => isVietnamese ? 'Tất cả sản phẩm được phân tích đều cao hơn ngưỡng lợi nhuận thấp.' : 'All analysed products are above the low-margin threshold.';
 }
 
 class AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {
@@ -90,4 +121,3 @@ class AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {
   @override
   bool shouldReload(covariant LocalizationsDelegate<AppLocalizations> old) => false;
 }
-

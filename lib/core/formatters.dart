@@ -1,10 +1,13 @@
 import 'package:intl/intl.dart';
 
 final NumberFormat _currencyFormat = NumberFormat.currency(locale: 'en_US', symbol: '฿', decimalDigits: 2);
+final NumberFormat _audCurrencyFormat = NumberFormat.currency(locale: 'en_AU', symbol: 'A\$', decimalDigits: 2);
 final DateFormat _dateTimeFormat = DateFormat('dd MMM yyyy HH:mm');
 final DateFormat _dateFormat = DateFormat('dd MMM yyyy');
 
 String formatMoney(num value) => _currencyFormat.format(value);
+
+String formatAudMoney(num value) => _audCurrencyFormat.format(value);
 
 String formatDateTimeText(String? raw) {
   if (raw == null || raw.trim().isEmpty) return '-';

@@ -257,6 +257,127 @@ class SalesSummary {
   }
 }
 
+class SalesProfitSummary {
+  const SalesProfitSummary({
+    required this.totalSales,
+    required this.cogs,
+    required this.grossProfit,
+    required this.grossMarginPercent,
+    required this.orderCount,
+    required this.itemsSold,
+    required this.averageOrderValue,
+  });
+
+  final double totalSales;
+  final double cogs;
+  final double grossProfit;
+  final double grossMarginPercent;
+  final int orderCount;
+  final double itemsSold;
+  final double averageOrderValue;
+
+  factory SalesProfitSummary.fromJson(Map<String, dynamic> json) {
+    return SalesProfitSummary(
+      totalSales: _number(json['total_sales'] ?? json['totalSales'], fallback: 0),
+      cogs: _number(json['cogs'], fallback: 0),
+      grossProfit: _number(json['gross_profit'] ?? json['grossProfit'], fallback: 0),
+      grossMarginPercent: _number(json['gross_margin_percent'] ?? json['grossMarginPercent'], fallback: 0),
+      orderCount: _int(json['order_count'] ?? json['orderCount'], fallback: 0),
+      itemsSold: _number(json['items_sold'] ?? json['itemsSold'], fallback: 0),
+      averageOrderValue: _number(json['average_order_value'] ?? json['averageOrderValue'], fallback: 0),
+    );
+  }
+}
+
+class SalesProfitProduct {
+  const SalesProfitProduct({
+    required this.stockId,
+    required this.productName,
+    required this.category,
+    required this.quantity,
+    required this.sales,
+    required this.cost,
+    required this.grossProfit,
+    required this.grossMarginPercent,
+    required this.unitCost,
+    required this.costSource,
+  });
+
+  final String stockId;
+  final String productName;
+  final String category;
+  final double quantity;
+  final double sales;
+  final double cost;
+  final double grossProfit;
+  final double grossMarginPercent;
+  final double? unitCost;
+  final String costSource;
+
+  factory SalesProfitProduct.fromJson(Map<String, dynamic> json) {
+    return SalesProfitProduct(
+      stockId: _text(json['stock_id'] ?? json['stockId']),
+      productName: _text(json['product_name'] ?? json['productName'], fallback: 'Unknown product'),
+      category: _text(json['category']),
+      quantity: _number(json['quantity'] ?? json['qty'], fallback: 0),
+      sales: _number(json['sales'], fallback: 0),
+      cost: _number(json['cost'], fallback: 0),
+      grossProfit: _number(json['gross_profit'] ?? json['grossProfit'], fallback: 0),
+      grossMarginPercent: _number(json['gross_margin_percent'] ?? json['grossMarginPercent'], fallback: 0),
+      unitCost: _numberNullable(json['unit_cost'] ?? json['unitCost']),
+      costSource: _text(json['cost_source'] ?? json['costSource']),
+    );
+  }
+}
+
+class SalesProfitReport {
+  const SalesProfitReport({
+    required this.date,
+    required this.summary,
+    required this.topByProfit,
+    required this.topByQuantity,
+    required this.negativeOrLowMarginItems,
+    required this.costBasis,
+    required this.dataSource,
+    required this.hasData,
+    required this.message,
+  });
+
+  final String date;
+  final SalesProfitSummary summary;
+  final List<SalesProfitProduct> topByProfit;
+  final List<SalesProfitProduct> topByQuantity;
+  final List<SalesProfitProduct> negativeOrLowMarginItems;
+  final String costBasis;
+  final String dataSource;
+  final bool hasData;
+  final String message;
+
+  factory SalesProfitReport.fromJson(Map<String, dynamic> json) {
+    List<SalesProfitProduct> parseRows(dynamic value) {
+      if (value is! List) return const <SalesProfitProduct>[];
+      return value
+          .whereType<Map>()
+          .map((item) => SalesProfitProduct.fromJson(Map<String, dynamic>.from(item)))
+          .toList(growable: false);
+    }
+
+    return SalesProfitReport(
+      date: _text(json['date']),
+      summary: SalesProfitSummary.fromJson(
+        json['summary'] is Map ? Map<String, dynamic>.from(json['summary'] as Map) : const <String, dynamic>{},
+      ),
+      topByProfit: parseRows(json['top_by_profit'] ?? json['topByProfit']),
+      topByQuantity: parseRows(json['top_by_quantity'] ?? json['topByQuantity']),
+      negativeOrLowMarginItems: parseRows(json['negative_or_low_margin_items'] ?? json['negativeOrLowMarginItems']),
+      costBasis: _text(json['cost_basis'] ?? json['costBasis']),
+      dataSource: _text(json['data_source'] ?? json['dataSource']),
+      hasData: _bool(json['has_data'] ?? json['hasData']),
+      message: _text(json['message']),
+    );
+  }
+}
+
 class VendorDirectoryRecord {
   const VendorDirectoryRecord({
     required this.vendorId,
