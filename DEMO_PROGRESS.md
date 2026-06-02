@@ -27,6 +27,7 @@
 - Sales now supports a selected business date by reading archive runs from the backend and loading the matching sales detail when the date is not today.
 - Product edit refresh now prefers fresh `barcode/lookup` data and only falls back to `products/detail` for missing fields, because `products/detail` can lag behind a write.
 - Scan Barcode now plays a confirmation sound/vibration on successful scan and auto-scrolls to the product actions block.
+- Product cost updates now write both POS `CostPrice` / `Last Purchase Price / Expected Cost` and OpenClaw supplier `last_cost`, while keeping `DefaultVendor` out of the save blocker path.
 
 ## Completed
 
@@ -120,6 +121,10 @@
   - Before: name `BO WAGU`, cost `0`, selling `49.99`
   - After: name `BO WAGU`, cost `0`, selling `50.49`
   - Backend response reported `changed_fields=["cost_price","selling_price"]`
+- ABALONE SAUCE cost verification:
+  - `014268800937` default supplier is `GOLD STAR / 00021`
+  - Cost updates now refresh POS `CostPrice` and OpenClaw supplier `last_cost`
+  - `DefaultVendor` remains `NULL` and does not block save
 - Sales date verification:
   - `2026-05-30` uses archive run `287ffb71-ffe7-477f-8d87-efc49eb6ef8f`
   - `amount_total=1842.0700000000002`

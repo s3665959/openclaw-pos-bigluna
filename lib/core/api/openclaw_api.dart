@@ -15,6 +15,65 @@ class ApiException implements Exception {
   String toString() => message;
 }
 
+class ProductUpdateWarning {
+  const ProductUpdateWarning({
+    required this.error,
+    required this.message,
+  });
+
+  final String error;
+  final String message;
+
+  factory ProductUpdateWarning.fromJson(Map<String, dynamic> json) {
+    return ProductUpdateWarning(
+      error: _cleanText(json['error']),
+      message: _cleanText(json['message']),
+    );
+  }
+}
+
+class ProductUpdateResult {
+  const ProductUpdateResult({
+    required this.ok,
+    required this.product,
+    required this.posExpectedCost,
+    required this.openClawSupplierLastCost,
+    required this.warnings,
+    required this.raw,
+  });
+
+  final bool ok;
+  final ProductRecord? product;
+  final double? posExpectedCost;
+  final double? openClawSupplierLastCost;
+  final List<ProductUpdateWarning> warnings;
+  final Map<String, dynamic> raw;
+}
+
+double? _numberNullableValue(dynamic value) {
+  if (value == null) return null;
+  if (value is num) return value.toDouble();
+  final text = value.toString().replaceAll(',', '').trim();
+  if (text.isEmpty || text.toUpperCase() == 'NULL') return null;
+  return double.tryParse(text);
+}
+
+String _cleanText(dynamic value, {String fallback = ''}) {
+  final text = value?.toString().trim() ?? '';
+  if (text.isEmpty || text.toUpperCase() == 'NULL') {
+    return fallback;
+  }
+  return text;
+}
+
+bool _parseBool(dynamic value, {bool fallback = false}) {
+  if (value == null) return fallback;
+  if (value is bool) return value;
+  final text = value.toString().trim().toLowerCase();
+  if (text.isEmpty || text == 'null') return fallback;
+  return text == 'true' || text == '1' || text == 'yes' || text == 'y';
+}
+
 class OpenClawApi {
   OpenClawApi({AppConfig? config}) {
     final effectiveConfig = config ?? AppConfig.fromEnv();
@@ -187,7 +246,7 @@ class OpenClawApi {
     try {
       final json = await _getMap('/barcode/lookup', query: {'code': clean});
       final row = _firstRow(json);
-      return row == null ? null : ProductRecord.fromJson(await _mergeOpenClawSupplierCost(row, clean));
+      return row == null ? null : ProductRecord.fromJson(row);
     } catch (_) {
       return null;
     }
@@ -201,13 +260,13 @@ class OpenClawApi {
     try {
       final json = await _getMap('/products/detail', query: {'q': clean});
       final row = _firstRow(json);
-      return row == null ? null : ProductRecord.fromJson(await _mergeOpenClawSupplierCost(row, clean));
+      return row == null ? null : ProductRecord.fromJson(row);
     } catch (_) {
       return null;
     }
   }
 
-  Future<ProductRecord?> updateProduct({
+  Future<ProductUpdateResult> updateProduct({
     required String stockId,
     required String productName,
     required double costPrice,
@@ -232,11 +291,32 @@ class OpenClawApi {
         'cost': costPrice,
         'selling_price': sellingPrice,
         'sellingPrice': sellingPrice,
-        'price': sellingPrice,
-      },
+      'price': sellingPrice,
+    },
     );
     final row = _firstRow(_asMap(response.data));
-    return row == null ? null : ProductRecord.fromJson(await _mergeOpenClawSupplierCost(row, stockId));
+    final product = row == null ? null : ProductRecord.fromJson(row);
+    final responseMap = _asMap(response.data);
+    final warningsJson = responseMap['warnings'];
+    final warnings = warningsJson is List
+        ? warningsJson
+            .whereType<Map>()
+            .map((item) => ProductUpdateWarning.fromJson(Map<String, dynamic>.from(item)))
+            .where((warning) => warning.error.isNotEmpty || warning.message.isNotEmpty)
+            .toList(growable: false)
+        : const <ProductUpdateWarning>[];
+    final posExpectedCost = _numberNullableValue(responseMap['posExpectedCost'] ?? responseMap['pos_expected_cost'] ?? product?.cost);
+    final openClawSupplierLastCost = _numberNullableValue(
+      responseMap['openClawSupplierLastCost'] ?? responseMap['openclawSupplierLastCost'] ?? responseMap['openclaw_supplier_last_cost'],
+    );
+    return ProductUpdateResult(
+      ok: _parseBool(responseMap['ok'], fallback: true),
+      product: product,
+      posExpectedCost: posExpectedCost,
+      openClawSupplierLastCost: openClawSupplierLastCost,
+      warnings: warnings,
+      raw: responseMap,
+    );
   }
 
   Future<Map<String, dynamic>> setDefaultProductSupplier(
@@ -695,36 +775,6 @@ class OpenClawApi {
       return Map<String, dynamic>.from(data);
     }
     return <String, dynamic>{};
-  }
-
-  Future<Map<String, dynamic>> _mergeOpenClawSupplierCost(Map<String, dynamic> row, String stockId) async {
-    final normalizedStockId = stockId.trim().isEmpty
-        ? (row['StockId'] ?? row['stock_id'] ?? row['stockId'] ?? row['product_id'] ?? '').toString().trim()
-        : stockId.trim();
-    if (normalizedStockId.isEmpty) {
-      return row;
-    }
-
-    try {
-      final summary = await getProductSupplierSummary(normalizedStockId);
-      final defaultCostRaw = summary['defaultSupplierLastCost'] ?? summary['default_supplier_last_cost'];
-      final parsed = defaultCostRaw == null || defaultCostRaw.toString().trim().isEmpty || defaultCostRaw.toString().toUpperCase() == 'NULL'
-          ? null
-          : double.tryParse(defaultCostRaw.toString().replaceAll(',', '').trim());
-      if (parsed == null) {
-        return row;
-      }
-      final merged = Map<String, dynamic>.from(row);
-      merged['cost'] = parsed;
-      merged['cost_price'] = parsed;
-      merged['CostPrice'] = parsed;
-      merged['Cost'] = parsed;
-      merged['UnitCost'] = parsed;
-      merged['unit_cost'] = parsed;
-      return merged;
-    } catch (_) {
-      return row;
-    }
   }
 
   static int _intValue(dynamic value, {required int fallback}) {

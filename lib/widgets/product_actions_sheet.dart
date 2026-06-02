@@ -362,7 +362,11 @@ class _ProductActionsSheetState extends State<ProductActionsSheet> {
         costPrice: costPrice,
         sellingPrice: sellingPrice,
       );
-      final refreshed = updated ?? await _reloadProduct();
+      final refreshed = updated.product ?? await _reloadProduct();
+      final warningMessages = updated.warnings
+          .map((warning) => warning.message.isNotEmpty ? warning.message : warning.error)
+          .where((message) => message.trim().isNotEmpty)
+          .toList(growable: false);
       if (refreshed != null) {
         _product = refreshed;
         widget.onProductChanged?.call(refreshed);
@@ -371,9 +375,9 @@ class _ProductActionsSheetState extends State<ProductActionsSheet> {
         _sellingController.text = _editablePriceText(refreshed);
       }
       setState(() {
-        _message = 'Product updated successfully';
+        _message = warningMessages.isNotEmpty ? 'Product updated with warnings: ${warningMessages.join(' ')}' : 'Product updated successfully';
       });
-      if (mounted) Navigator.of(context).pop(true);
+      if (mounted && warningMessages.isEmpty) Navigator.of(context).pop(true);
     } catch (error) {
       setState(() {
         _error = error.toString();
