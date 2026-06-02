@@ -99,13 +99,20 @@ class ProductRecord {
                     ? 'low-stock'
                     : 'in-stock';
     final posExpectedCost = _numberNullable(
-      json['pos_expected_cost'] ?? json['posExpectedCost'] ?? json['CostPrice'] ?? json['Cost'] ?? json['UnitCost'] ?? json['unit_cost'],
+      json['pos_expected_cost'] ??
+          json['posExpectedCost'] ??
+          json['LastOrderPrice'] ??
+          json['last_order_price'] ??
+          json['CostPrice'] ??
+          json['Cost'] ??
+          json['UnitCost'] ??
+          json['unit_cost'],
     );
     final openClawSupplierLastCost = _numberNullable(
       json['openclaw_supplier_last_cost'] ?? json['openclawSupplierLastCost'],
     );
     final effectiveCost = _numberNullable(json['effective_cost'] ?? json['effectiveCost']);
-    final costValue = effectiveCost ?? openClawSupplierLastCost ?? posExpectedCost ?? _numberNullable(
+    final costValue = posExpectedCost ?? effectiveCost ?? openClawSupplierLastCost ?? _numberNullable(
       json['cost'] ?? json['cost_price'] ?? json['CostPrice'] ?? json['Cost'] ?? json['UnitCost'] ?? json['unit_cost'],
     );
     final reorder = _numberNullable(

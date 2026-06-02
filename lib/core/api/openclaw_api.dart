@@ -307,12 +307,17 @@ class OpenClawApi {
             .where((warning) => warning.error.isNotEmpty || warning.message.isNotEmpty)
             .toList(growable: false)
         : const <ProductUpdateWarning>[];
-    final posExpectedCost = _numberNullableValue(responseMap['posExpectedCost'] ?? responseMap['pos_expected_cost']);
+    final posExpectedCost = _numberNullableValue(
+      responseMap['posExpectedCost'] ??
+          responseMap['pos_expected_cost'] ??
+          responseMap['LastOrderPrice'] ??
+          responseMap['last_order_price'],
+    );
     final openClawSupplierLastCost = _numberNullableValue(
       responseMap['openClawSupplierLastCost'] ?? responseMap['openclawSupplierLastCost'] ?? responseMap['openclaw_supplier_last_cost'],
     );
     final effectiveCost = _numberNullableValue(
-      responseMap['effectiveCost'] ?? responseMap['effective_cost'] ?? product?.effectiveCost ?? product?.cost,
+      responseMap['effectiveCost'] ?? responseMap['effective_cost'] ?? product?.posExpectedCost ?? product?.effectiveCost ?? product?.cost,
     );
     return ProductUpdateResult(
       ok: _parseBool(responseMap['ok'], fallback: true),

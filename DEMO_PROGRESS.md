@@ -28,6 +28,8 @@
 - Product edit refresh now prefers fresh `barcode/lookup` data and only falls back to `products/detail` for missing fields, because `products/detail` can lag behind a write.
 - Scan Barcode now plays a confirmation sound/vibration on successful scan and auto-scrolls to the product actions block.
 - Product cost updates now keep raw POS `CostPrice` separate from OpenClaw `effective_cost` / supplier `last_cost`, while keeping `DefaultVendor` out of the save blocker path.
+- The corrected POS connector now exposes raw product cost as `dbo.StockItems.LastOrderPrice`, so Edit Product prefills from `pos_expected_cost` and preserves `openclaw_supplier_last_cost` as a separate supplier reference.
+- The runtime product detail/update flow now returns raw POS cost and supplier cost independently, so the UI no longer falls back to `0` when `pos_expected_cost` is present.
 
 ## Completed
 
@@ -123,7 +125,7 @@
   - Backend response reported `changed_fields=["cost_price","selling_price"]`
 - ABALONE SAUCE cost verification:
   - `014268800937` default supplier is `GOLD STAR / 00021`
-  - Cost updates now refresh OpenClaw supplier `last_cost` and return `effective_cost` separately from raw POS `CostPrice`
+  - Cost updates now refresh OpenClaw supplier `last_cost` and return `pos_expected_cost` from raw POS `LastOrderPrice`
   - `DefaultVendor` remains `NULL` and does not block save
 - Sales date verification:
   - `2026-05-30` uses archive run `287ffb71-ffe7-477f-8d87-efc49eb6ef8f`

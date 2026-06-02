@@ -185,7 +185,10 @@ class _ProductActionsSheetState extends State<ProductActionsSheet> {
       vendor: barcode.vendor.isNotEmpty ? barcode.vendor : detail.vendor,
       barcode: barcode.barcode.isNotEmpty ? barcode.barcode : detail.barcode,
       price: barcode.price,
-      cost: barcode.cost ?? detail.cost,
+      cost: barcode.posExpectedCost ?? detail.posExpectedCost ?? barcode.cost ?? detail.cost,
+      effectiveCost: barcode.effectiveCost ?? detail.effectiveCost,
+      posExpectedCost: barcode.posExpectedCost ?? detail.posExpectedCost,
+      openClawSupplierLastCost: barcode.openClawSupplierLastCost ?? detail.openClawSupplierLastCost,
       reorderLevel: barcode.reorderLevel ?? detail.reorderLevel,
       lowStockThreshold: barcode.lowStockThreshold ?? detail.lowStockThreshold,
       stockQty: barcode.stockQty,
@@ -363,7 +366,8 @@ class _ProductActionsSheetState extends State<ProductActionsSheet> {
         sellingPrice: sellingPrice,
       );
       final refreshed = updated.product ?? await _reloadProduct();
-      final supplierCost = updated.effectiveCost ?? updated.openClawSupplierLastCost;
+      final supplierCost = updated.openClawSupplierLastCost;
+      final liveCost = refreshed?.posExpectedCost ?? updated.posExpectedCost ?? refreshed?.cost ?? updated.effectiveCost ?? supplierCost;
       final warningMessages = updated.warnings
           .map((warning) => warning.message.isNotEmpty ? warning.message : warning.error)
           .where((message) => message.trim().isNotEmpty)
@@ -374,8 +378,8 @@ class _ProductActionsSheetState extends State<ProductActionsSheet> {
         _productNameController.text = refreshed.name;
         _costController.text = _editableCostText(refreshed);
         _sellingController.text = _editablePriceText(refreshed);
-      } else if (supplierCost != null) {
-        _costController.text = _trimNumeric(supplierCost);
+      } else if (liveCost != null) {
+        _costController.text = _trimNumeric(liveCost);
       }
       setState(() {
         _message = warningMessages.isNotEmpty ? 'Product updated with warnings: ${warningMessages.join(' ')}' : 'Product updated successfully';
@@ -411,18 +415,20 @@ class _ProductActionsSheetState extends State<ProductActionsSheet> {
     }
     final raw = product.raw ?? const <String, dynamic>{};
     final candidates = <dynamic>[
+      product.posExpectedCost,
       product.cost,
       product.effectiveCost,
       product.openClawSupplierLastCost,
-      product.posExpectedCost,
+      raw['pos_expected_cost'],
+      raw['posExpectedCost'],
+      raw['LastOrderPrice'],
+      raw['last_order_price'],
       raw['cost'],
       raw['cost_price'],
       raw['effective_cost'],
       raw['effectiveCost'],
       raw['openclaw_supplier_last_cost'],
       raw['openclawSupplierLastCost'],
-      raw['pos_expected_cost'],
-      raw['posExpectedCost'],
       raw['CostPrice'],
       raw['Cost'],
       raw['UnitCost'],
