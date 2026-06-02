@@ -60,6 +60,9 @@ class ProductRecord {
     required this.stockQty,
     required this.status,
     this.cost,
+    this.effectiveCost,
+    this.posExpectedCost,
+    this.openClawSupplierLastCost,
     this.reorderLevel,
     this.lowStockThreshold,
     this.raw,
@@ -72,6 +75,9 @@ class ProductRecord {
   final String barcode;
   final double price;
   final double? cost;
+  final double? effectiveCost;
+  final double? posExpectedCost;
+  final double? openClawSupplierLastCost;
   final double? reorderLevel;
   final double? lowStockThreshold;
   final double stockQty;
@@ -92,7 +98,14 @@ class ProductRecord {
                 : stockQty <= 5
                     ? 'low-stock'
                     : 'in-stock';
-    final costValue = _numberNullable(
+    final posExpectedCost = _numberNullable(
+      json['pos_expected_cost'] ?? json['posExpectedCost'] ?? json['CostPrice'] ?? json['Cost'] ?? json['UnitCost'] ?? json['unit_cost'],
+    );
+    final openClawSupplierLastCost = _numberNullable(
+      json['openclaw_supplier_last_cost'] ?? json['openclawSupplierLastCost'],
+    );
+    final effectiveCost = _numberNullable(json['effective_cost'] ?? json['effectiveCost']);
+    final costValue = effectiveCost ?? openClawSupplierLastCost ?? posExpectedCost ?? _numberNullable(
       json['cost'] ?? json['cost_price'] ?? json['CostPrice'] ?? json['Cost'] ?? json['UnitCost'] ?? json['unit_cost'],
     );
     final reorder = _numberNullable(
@@ -107,6 +120,9 @@ class ProductRecord {
       barcode: _text(json['barcode'] ?? json['Barcode'] ?? json['Barcode1'] ?? json['Barcode2'] ?? json['StockId'], fallback: ''),
       price: _number(json['price'] ?? json['SalesPrice1'] ?? json['unit_price'] ?? json['UnitPrice'], fallback: 0),
       cost: costValue,
+      effectiveCost: effectiveCost,
+      posExpectedCost: posExpectedCost,
+      openClawSupplierLastCost: openClawSupplierLastCost,
       reorderLevel: reorder,
       lowStockThreshold: reorder,
       stockQty: stockQty,

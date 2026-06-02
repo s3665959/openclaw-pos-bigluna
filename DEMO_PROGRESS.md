@@ -27,7 +27,7 @@
 - Sales now supports a selected business date by reading archive runs from the backend and loading the matching sales detail when the date is not today.
 - Product edit refresh now prefers fresh `barcode/lookup` data and only falls back to `products/detail` for missing fields, because `products/detail` can lag behind a write.
 - Scan Barcode now plays a confirmation sound/vibration on successful scan and auto-scrolls to the product actions block.
-- Product cost updates now write both POS `CostPrice` / `Last Purchase Price / Expected Cost` and OpenClaw supplier `last_cost`, while keeping `DefaultVendor` out of the save blocker path.
+- Product cost updates now keep raw POS `CostPrice` separate from OpenClaw `effective_cost` / supplier `last_cost`, while keeping `DefaultVendor` out of the save blocker path.
 
 ## Completed
 
@@ -123,7 +123,7 @@
   - Backend response reported `changed_fields=["cost_price","selling_price"]`
 - ABALONE SAUCE cost verification:
   - `014268800937` default supplier is `GOLD STAR / 00021`
-  - Cost updates now refresh POS `CostPrice` and OpenClaw supplier `last_cost`
+  - Cost updates now refresh OpenClaw supplier `last_cost` and return `effective_cost` separately from raw POS `CostPrice`
   - `DefaultVendor` remains `NULL` and does not block save
 - Sales date verification:
   - `2026-05-30` uses archive run `287ffb71-ffe7-477f-8d87-efc49eb6ef8f`
@@ -163,7 +163,7 @@
   - `GET /pos-dashboard/api/products/count`
   - `GET /pos-dashboard/api/archive/runs?month=2026-05&page=1&page_size=50`
   - `GET /pos-dashboard/api/archive/runs/287ffb71-ffe7-477f-8d87-efc49eb6ef8f/sales-detail?page=1&limit=2&sort=transaction_desc`
-  - `POST /pos-dashboard/api/products/update` for `00001111`
+- `POST /pos-dashboard/api/products/update` for `00001111`
 
 ## Notes
 

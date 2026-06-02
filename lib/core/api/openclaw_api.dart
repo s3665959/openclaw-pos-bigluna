@@ -38,6 +38,7 @@ class ProductUpdateResult {
     required this.product,
     required this.posExpectedCost,
     required this.openClawSupplierLastCost,
+    required this.effectiveCost,
     required this.warnings,
     required this.raw,
   });
@@ -46,6 +47,7 @@ class ProductUpdateResult {
   final ProductRecord? product;
   final double? posExpectedCost;
   final double? openClawSupplierLastCost;
+  final double? effectiveCost;
   final List<ProductUpdateWarning> warnings;
   final Map<String, dynamic> raw;
 }
@@ -305,15 +307,19 @@ class OpenClawApi {
             .where((warning) => warning.error.isNotEmpty || warning.message.isNotEmpty)
             .toList(growable: false)
         : const <ProductUpdateWarning>[];
-    final posExpectedCost = _numberNullableValue(responseMap['posExpectedCost'] ?? responseMap['pos_expected_cost'] ?? product?.cost);
+    final posExpectedCost = _numberNullableValue(responseMap['posExpectedCost'] ?? responseMap['pos_expected_cost']);
     final openClawSupplierLastCost = _numberNullableValue(
       responseMap['openClawSupplierLastCost'] ?? responseMap['openclawSupplierLastCost'] ?? responseMap['openclaw_supplier_last_cost'],
+    );
+    final effectiveCost = _numberNullableValue(
+      responseMap['effectiveCost'] ?? responseMap['effective_cost'] ?? product?.effectiveCost ?? product?.cost,
     );
     return ProductUpdateResult(
       ok: _parseBool(responseMap['ok'], fallback: true),
       product: product,
       posExpectedCost: posExpectedCost,
       openClawSupplierLastCost: openClawSupplierLastCost,
+      effectiveCost: effectiveCost,
       warnings: warnings,
       raw: responseMap,
     );
@@ -785,13 +791,13 @@ class OpenClawApi {
   }
 
   static Map<String, dynamic>? _firstRow(Map<String, dynamic> json) {
+    if (json['product'] is Map) return Map<String, dynamic>.from(json['product'] as Map);
+    if (json['row'] is Map) return Map<String, dynamic>.from(json['row'] as Map);
     final rows = json['rows'];
     if (rows is List && rows.isNotEmpty && rows.first is Map) {
       return Map<String, dynamic>.from(rows.first as Map);
     }
     if (json['draft'] is Map) return Map<String, dynamic>.from(json['draft'] as Map);
-    if (json['product'] is Map) return Map<String, dynamic>.from(json['product'] as Map);
-    if (json['row'] is Map) return Map<String, dynamic>.from(json['row'] as Map);
     if (json['vendor'] is Map) return Map<String, dynamic>.from(json['vendor'] as Map);
     if (json['order'] is Map) return Map<String, dynamic>.from(json['order'] as Map);
     if (json['receipt'] is Map) return Map<String, dynamic>.from(json['receipt'] as Map);

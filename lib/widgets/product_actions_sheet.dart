@@ -363,6 +363,7 @@ class _ProductActionsSheetState extends State<ProductActionsSheet> {
         sellingPrice: sellingPrice,
       );
       final refreshed = updated.product ?? await _reloadProduct();
+      final supplierCost = updated.effectiveCost ?? updated.openClawSupplierLastCost;
       final warningMessages = updated.warnings
           .map((warning) => warning.message.isNotEmpty ? warning.message : warning.error)
           .where((message) => message.trim().isNotEmpty)
@@ -373,6 +374,8 @@ class _ProductActionsSheetState extends State<ProductActionsSheet> {
         _productNameController.text = refreshed.name;
         _costController.text = _editableCostText(refreshed);
         _sellingController.text = _editablePriceText(refreshed);
+      } else if (supplierCost != null) {
+        _costController.text = _trimNumeric(supplierCost);
       }
       setState(() {
         _message = warningMessages.isNotEmpty ? 'Product updated with warnings: ${warningMessages.join(' ')}' : 'Product updated successfully';
@@ -409,8 +412,17 @@ class _ProductActionsSheetState extends State<ProductActionsSheet> {
     final raw = product.raw ?? const <String, dynamic>{};
     final candidates = <dynamic>[
       product.cost,
+      product.effectiveCost,
+      product.openClawSupplierLastCost,
+      product.posExpectedCost,
       raw['cost'],
       raw['cost_price'],
+      raw['effective_cost'],
+      raw['effectiveCost'],
+      raw['openclaw_supplier_last_cost'],
+      raw['openclawSupplierLastCost'],
+      raw['pos_expected_cost'],
+      raw['posExpectedCost'],
       raw['CostPrice'],
       raw['Cost'],
       raw['UnitCost'],
