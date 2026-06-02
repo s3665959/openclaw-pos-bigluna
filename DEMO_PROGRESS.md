@@ -30,6 +30,7 @@
 - Product cost updates now keep raw POS `CostPrice` separate from OpenClaw `effective_cost` / supplier `last_cost`, while keeping `DefaultVendor` out of the save blocker path.
 - The corrected POS connector now exposes raw product cost as `dbo.StockItems.LastOrderPrice`, so Edit Product prefills from `pos_expected_cost` and preserves `openclaw_supplier_last_cost` as a separate supplier reference.
 - The runtime product detail/update flow now returns raw POS cost and supplier cost independently, so the UI no longer falls back to `0` when `pos_expected_cost` is present.
+- False `pos_expected_cost_update_failed` warnings are now suppressed in the mobile client when the returned `pos_expected_cost` already matches the submitted cost.
 
 ## Completed
 

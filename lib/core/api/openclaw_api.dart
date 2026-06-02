@@ -247,7 +247,7 @@ class OpenClawApi {
     }
     try {
       final json = await _getMap('/barcode/lookup', query: {'code': clean});
-      final row = _firstRow(json);
+      final row = _mergeProductCostFields(json, _firstRow(json));
       return row == null ? null : ProductRecord.fromJson(row);
     } catch (_) {
       return null;
@@ -261,7 +261,7 @@ class OpenClawApi {
     }
     try {
       final json = await _getMap('/products/detail', query: {'q': clean});
-      final row = _firstRow(json);
+      final row = _mergeProductCostFields(json, _firstRow(json));
       return row == null ? null : ProductRecord.fromJson(row);
     } catch (_) {
       return null;
@@ -296,17 +296,9 @@ class OpenClawApi {
       'price': sellingPrice,
     },
     );
-    final row = _firstRow(_asMap(response.data));
-    final product = row == null ? null : ProductRecord.fromJson(row);
     final responseMap = _asMap(response.data);
-    final warningsJson = responseMap['warnings'];
-    final warnings = warningsJson is List
-        ? warningsJson
-            .whereType<Map>()
-            .map((item) => ProductUpdateWarning.fromJson(Map<String, dynamic>.from(item)))
-            .where((warning) => warning.error.isNotEmpty || warning.message.isNotEmpty)
-            .toList(growable: false)
-        : const <ProductUpdateWarning>[];
+    final row = _mergeProductCostFields(responseMap, _firstRow(responseMap));
+    final product = row == null ? null : ProductRecord.fromJson(row);
     final posExpectedCost = _numberNullableValue(
       responseMap['posExpectedCost'] ??
           responseMap['pos_expected_cost'] ??
@@ -319,6 +311,18 @@ class OpenClawApi {
     final effectiveCost = _numberNullableValue(
       responseMap['effectiveCost'] ?? responseMap['effective_cost'] ?? product?.posExpectedCost ?? product?.effectiveCost ?? product?.cost,
     );
+    final warningsJson = responseMap['warnings'];
+    final warnings = warningsJson is List
+        ? warningsJson
+            .whereType<Map>()
+            .map((item) => ProductUpdateWarning.fromJson(Map<String, dynamic>.from(item)))
+            .where((warning) => warning.error.isNotEmpty || warning.message.isNotEmpty)
+            .where((warning) {
+              if (warning.error != 'pos_expected_cost_update_failed') return true;
+              return posExpectedCost == null || (posExpectedCost - costPrice).abs() > 0.0001;
+            })
+            .toList(growable: false)
+        : const <ProductUpdateWarning>[];
     return ProductUpdateResult(
       ok: _parseBool(responseMap['ok'], fallback: true),
       product: product,
@@ -807,6 +811,21 @@ class OpenClawApi {
     if (json['order'] is Map) return Map<String, dynamic>.from(json['order'] as Map);
     if (json['receipt'] is Map) return Map<String, dynamic>.from(json['receipt'] as Map);
     return null;
+  }
+
+  static Map<String, dynamic>? _mergeProductCostFields(Map<String, dynamic> json, Map<String, dynamic>? row) {
+    if (row == null) return null;
+    return {
+      ...row,
+      'pos_expected_cost': json['pos_expected_cost'] ?? json['posExpectedCost'] ?? row['pos_expected_cost'],
+      'posExpectedCost': json['posExpectedCost'] ?? json['pos_expected_cost'] ?? row['posExpectedCost'],
+      'effective_cost': json['effective_cost'] ?? json['effectiveCost'] ?? row['effective_cost'],
+      'effectiveCost': json['effectiveCost'] ?? json['effective_cost'] ?? row['effectiveCost'],
+      'openclaw_supplier_last_cost':
+          json['openclaw_supplier_last_cost'] ?? json['openclawSupplierLastCost'] ?? row['openclaw_supplier_last_cost'],
+      'openclawSupplierLastCost':
+          json['openclawSupplierLastCost'] ?? json['openclaw_supplier_last_cost'] ?? row['openclawSupplierLastCost'],
+    };
   }
 
   static String _extractMessage(dynamic payload, {required String fallback}) {
