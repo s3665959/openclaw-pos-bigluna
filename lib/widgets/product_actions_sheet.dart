@@ -366,18 +366,42 @@ class _ProductActionsSheetState extends State<ProductActionsSheet> {
         sellingPrice: sellingPrice,
       );
       final refreshed = updated.product ?? await _reloadProduct();
+      final liveProduct =
+          updated.posExpectedCost != null &&
+              (refreshed?.posExpectedCost == null || (refreshed!.posExpectedCost! - updated.posExpectedCost!).abs() > 0.0001)
+          ? ProductRecord(
+              id: refreshed?.id ?? _product.id,
+              name: refreshed?.name ?? _product.name,
+              category: refreshed?.category ?? _product.category,
+              vendor: refreshed?.vendor ?? _product.vendor,
+              barcode: refreshed?.barcode ?? _product.barcode,
+              price: refreshed?.price ?? sellingPrice,
+              cost: updated.posExpectedCost,
+              effectiveCost: refreshed?.effectiveCost ?? updated.effectiveCost ?? updated.posExpectedCost,
+              posExpectedCost: updated.posExpectedCost,
+              openClawSupplierLastCost:
+                  refreshed?.openClawSupplierLastCost ?? updated.openClawSupplierLastCost,
+              stockQty: refreshed?.stockQty ?? _product.stockQty,
+              reorderLevel: refreshed?.reorderLevel ?? _product.reorderLevel,
+              status: refreshed?.status ?? _product.status,
+              raw: {
+                ...?_product.raw,
+                ...?refreshed?.raw,
+              },
+            )
+          : refreshed;
       final supplierCost = updated.openClawSupplierLastCost;
-      final liveCost = refreshed?.posExpectedCost ?? updated.posExpectedCost ?? refreshed?.cost ?? updated.effectiveCost ?? supplierCost;
+      final liveCost = liveProduct?.posExpectedCost ?? updated.posExpectedCost ?? liveProduct?.cost ?? updated.effectiveCost ?? supplierCost;
       final warningMessages = updated.warnings
           .map((warning) => warning.message.isNotEmpty ? warning.message : warning.error)
           .where((message) => message.trim().isNotEmpty)
           .toList(growable: false);
-      if (refreshed != null) {
-        _product = refreshed;
-        widget.onProductChanged?.call(refreshed);
-        _productNameController.text = refreshed.name;
-        _costController.text = _editableCostText(refreshed);
-        _sellingController.text = _editablePriceText(refreshed);
+      if (liveProduct != null) {
+        _product = liveProduct;
+        widget.onProductChanged?.call(liveProduct);
+        _productNameController.text = liveProduct.name;
+        _costController.text = _editableCostText(liveProduct);
+        _sellingController.text = _editablePriceText(liveProduct);
       } else if (liveCost != null) {
         _costController.text = _trimNumeric(liveCost);
       }

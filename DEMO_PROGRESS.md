@@ -177,6 +177,8 @@
 - Flutter changes in this round:
   - Product actions now report the backend blocker more clearly when the default vendor cost row is missing.
   - Expiry lot date inputs now open a date picker in both the shared product actions sheet and the operations screen.
+  - Product cost now prefers POS `pos_expected_cost` (`dbo.StockItems.LastOrderPrice`) and keeps the confirmed update response value if the immediate detail refresh is briefly stale.
+  - Product update warnings suppress `pos_expected_cost_update_failed` when the server confirms the submitted cost.
 - Android SDK is installed at `/home/april/projects/android-sdk`
 - `JAVA_HOME` must point to `/home/april/projects/java-17` for Android builds in this shell
 - No Android device was attached when checking `adb devices`, so I could not capture a fresh on-device screenshot from this environment
