@@ -52,6 +52,28 @@ class ProductUpdateResult {
   final Map<String, dynamic> raw;
 }
 
+class ProductCreateResult {
+  const ProductCreateResult({
+    required this.ok,
+    required this.created,
+    required this.product,
+    required this.posExpectedCost,
+    required this.effectiveCost,
+    required this.initialStockApplied,
+    required this.warnings,
+    required this.raw,
+  });
+
+  final bool ok;
+  final bool created;
+  final ProductRecord? product;
+  final double? posExpectedCost;
+  final double? effectiveCost;
+  final bool initialStockApplied;
+  final List<ProductUpdateWarning> warnings;
+  final Map<String, dynamic> raw;
+}
+
 double? _numberNullableValue(dynamic value) {
   if (value == null) return null;
   if (value is num) return value.toDouble();
@@ -329,6 +351,74 @@ class OpenClawApi {
       posExpectedCost: posExpectedCost,
       openClawSupplierLastCost: openClawSupplierLastCost,
       effectiveCost: effectiveCost,
+      warnings: warnings,
+      raw: responseMap,
+    );
+  }
+
+  Future<ProductCreateResult> createProduct({
+    required String stockId,
+    required String productName,
+    required double costPrice,
+    required double sellingPrice,
+    int quantity = 0,
+    String? category,
+    String operator = 'mobile-app',
+    String reason = 'Create product from mobile scan',
+  }) async {
+    _ensureWriteEnabled();
+    final response = await _request(
+      '/products/create',
+      method: 'POST',
+      data: {
+        'stock_id': stockId,
+        'product_id': stockId,
+        'barcode': stockId,
+        'operator': operator,
+        'reason': reason,
+        'product_name': productName,
+        'productName': productName,
+        'name': productName,
+        'cost_price': costPrice,
+        'costPrice': costPrice,
+        'cost': costPrice,
+        'selling_price': sellingPrice,
+        'sellingPrice': sellingPrice,
+        'price': sellingPrice,
+        'quantity': quantity,
+        if (category != null && category.trim().isNotEmpty) 'category': category.trim(),
+      },
+    );
+    final responseMap = _asMap(response.data);
+    final row = _mergeProductCostFields(responseMap, _firstRow(responseMap));
+    final product = row == null ? null : ProductRecord.fromJson(row);
+    final posExpectedCost = _numberNullableValue(
+      responseMap['posExpectedCost'] ??
+          responseMap['pos_expected_cost'] ??
+          responseMap['LastOrderPrice'] ??
+          responseMap['last_order_price'],
+    );
+    final effectiveCost = _numberNullableValue(
+      responseMap['effectiveCost'] ?? responseMap['effective_cost'] ?? product?.posExpectedCost ?? product?.effectiveCost ?? product?.cost,
+    );
+    final warningsJson = responseMap['warnings'];
+    final warnings = warningsJson is List
+        ? warningsJson
+            .whereType<Map>()
+            .map((item) => ProductUpdateWarning.fromJson(Map<String, dynamic>.from(item)))
+            .where((warning) => warning.error.isNotEmpty || warning.message.isNotEmpty)
+            .toList(growable: false)
+        : const <ProductUpdateWarning>[];
+    return ProductCreateResult(
+      ok: _parseBool(responseMap['ok'], fallback: true),
+      created: _parseBool(responseMap['created'], fallback: true),
+      product: product,
+      posExpectedCost: posExpectedCost,
+      effectiveCost: effectiveCost,
+      initialStockApplied: _parseBool(
+        responseMap['initialStockApplied'] ?? responseMap['initial_stock_applied'],
+        fallback: quantity <= 0,
+      ),
       warnings: warnings,
       raw: responseMap,
     );

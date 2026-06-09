@@ -105,6 +105,25 @@ class AppLocalizations {
   String get noQuantityAnalysis => isVietnamese ? 'Chưa có phân tích số lượng' : 'No quantity analysis';
   String get noLowMarginItems => isVietnamese ? 'Không có sản phẩm lãi thấp' : 'No low-margin items';
   String get allAboveMarginThreshold => isVietnamese ? 'Tất cả sản phẩm được phân tích đều cao hơn ngưỡng lợi nhuận thấp.' : 'All analysed products are above the low-margin threshold.';
+  String get addNewProduct => isVietnamese ? 'Thêm sản phẩm mới' : 'Add New Product';
+  String get productNotFound => isVietnamese ? 'Không tìm thấy sản phẩm' : 'Product not found';
+  String get thisBarcodeAlreadyExists => isVietnamese ? 'Mã vạch này đã tồn tại' : 'This barcode already exists';
+  String get openExistingProduct => isVietnamese ? 'Mở sản phẩm hiện có' : 'Open existing product';
+  String get stockIdBarcode => isVietnamese ? 'Mã hàng / Mã vạch' : 'Stock ID / Barcode';
+  String get productName => isVietnamese ? 'Tên sản phẩm' : 'Product Name';
+  String get costPrice => isVietnamese ? 'Giá vốn' : 'Cost Price';
+  String get createProduct => isVietnamese ? 'Tạo sản phẩm' : 'Create Product';
+  String get productCreatedSuccessfully => isVietnamese ? 'Tạo sản phẩm thành công' : 'Product created successfully';
+  String get searchManually => isVietnamese ? 'Tìm thủ công' : 'Search manually';
+  String get scanToSearch => isVietnamese ? 'Quét để tìm kiếm' : 'Scan to search';
+  String get category => isVietnamese ? 'Danh mục' : 'Category';
+  String get enterBarcodeOrProductName => isVietnamese ? 'Nhập mã vạch hoặc tên sản phẩm' : 'Enter barcode or product name';
+  String get quantityOptionalDefaultsZero => isVietnamese ? 'Số lượng ban đầu, để trống sẽ là 0' : 'Initial quantity, defaults to 0';
+  String get createAnotherProduct => isVietnamese ? 'Tạo sản phẩm khác' : 'Create another product';
+  String get searchProducts => isVietnamese ? 'Tìm sản phẩm' : 'Search products';
+  String get searchProductsHint => isVietnamese ? 'Tên sản phẩm, SKU hoặc mã vạch' : 'Product name, SKU, or barcode';
+  String get noProductsFoundDescription => isVietnamese ? 'Thử từ khóa khác hoặc quét mã vạch.' : 'Try a different search term or scan a barcode.';
+  String get searchResultsLoaded => isVietnamese ? 'Đã tải kết quả tìm kiếm' : 'Search loaded';
 }
 
 class AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

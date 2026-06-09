@@ -4,9 +4,12 @@ import 'package:flutter/material.dart';
 
 import '../core/api/app_services.dart';
 import '../core/formatters.dart';
+import '../l10n/app_localizations.dart';
 import '../models/pos_models.dart';
 import '../widgets/common_widgets.dart';
 import '../widgets/product_actions_sheet.dart';
+import 'barcode_capture_screen.dart';
+import 'product_create_screen.dart';
 
 String _formatProductPriceLine(ProductRecord product) {
   final costText = product.cost == null ? '-' : formatMoney(product.cost!);
@@ -31,11 +34,20 @@ class _ProductsScreenState extends State<ProductsScreen> {
   String? _selectedCategory;
   String? _selectedVendor;
   String? _selectedStockStatus;
+  String? _pendingCreateBarcode;
 
   @override
   void initState() {
     super.initState();
     _future = _load();
+  }
+
+  bool _looksLikeBarcode(String value) {
+    final text = value.trim();
+    if (text.isEmpty) return false;
+    if (RegExp(r'^\d{6,}$').hasMatch(text)) return true;
+    if (RegExp(r'^[A-Za-z0-9\-_]{6,}$').hasMatch(text) && !text.contains(' ')) return true;
+    return false;
   }
 
   Future<ProductListPage> _load() async {
@@ -63,8 +75,10 @@ class _ProductsScreenState extends State<ProductsScreen> {
   }
 
   Future<void> _applySearch() async {
+    final query = _searchInput.trim();
     setState(() {
-      _query = _searchInput.trim();
+      _query = query;
+      _pendingCreateBarcode = _looksLikeBarcode(query) ? query : null;
       _future = _load();
     });
     await _future;
@@ -81,6 +95,68 @@ class _ProductsScreenState extends State<ProductsScreen> {
     }
   }
 
+  Future<void> _openCreateProduct({String? initialStockId}) async {
+    final created = await openProductCreateScreen(context, initialStockId: initialStockId);
+    if (!mounted || created == null) return;
+    final nextQuery = created.barcode.isNotEmpty ? created.barcode : created.id;
+    _searchController.text = nextQuery;
+    setState(() {
+      _searchInput = nextQuery;
+      _query = nextQuery;
+      _pendingCreateBarcode = null;
+      _future = _load();
+    });
+    await _future;
+    if (!mounted) return;
+    await _openActions(created, initialMode: ProductActionMode.edit);
+  }
+
+  Future<void> _scanForSearch() async {
+    final code = await openBarcodeCaptureScreen(context);
+    if (!mounted || code == null || code.trim().isEmpty) return;
+    _searchController.text = code;
+    setState(() {
+      _searchInput = code;
+    });
+    await _applySearch();
+  }
+
+  Widget? _buildSearchSuffix(AppLocalizations l10n) {
+    if (_searchController.text.isEmpty) {
+      return IconButton(
+        tooltip: l10n.scanToSearch,
+        onPressed: _scanForSearch,
+        icon: const Icon(Icons.qr_code_scanner_rounded),
+      );
+    }
+    return SizedBox(
+      width: 96,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          IconButton(
+            tooltip: l10n.clear,
+            onPressed: () {
+              _searchController.clear();
+              setState(() {
+                _searchInput = '';
+                _query = '';
+                _pendingCreateBarcode = null;
+                _future = _load();
+              });
+            },
+            icon: const Icon(Icons.clear_rounded),
+          ),
+          IconButton(
+            tooltip: l10n.scanToSearch,
+            onPressed: _scanForSearch,
+            icon: const Icon(Icons.qr_code_scanner_rounded),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   void dispose() {
     _searchDebounce?.cancel();
@@ -91,11 +167,12 @@ class _ProductsScreenState extends State<ProductsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return AppFrame(
-      title: 'Products',
+      title: l10n.products,
       actions: [
         IconButton(
-          tooltip: 'Refresh',
+          tooltip: l10n.refresh,
           onPressed: _refresh,
           icon: const Icon(Icons.refresh_rounded),
         ),
@@ -108,28 +185,17 @@ class _ProductsScreenState extends State<ProductsScreen> {
           padding: const EdgeInsets.all(16),
           children: [
             SectionCard(
-              title: 'Search products',
+              title: l10n.searchProducts,
               subtitle: 'Supports name / SKU / barcode from the live API',
               child: Column(
                 children: [
                   TextField(
                     controller: _searchController,
                     decoration: InputDecoration(
-                      labelText: 'Search',
-                      hintText: 'Product name, SKU, or barcode',
+                      labelText: l10n.search,
+                      hintText: l10n.searchProductsHint,
                       prefixIcon: const Icon(Icons.search_rounded),
-                      suffixIcon: _searchController.text.isEmpty
-                          ? null
-                          : IconButton(
-                              onPressed: () {
-                                _searchController.clear();
-                                setState(() {
-                                  _searchInput = '';
-                                });
-                                _applySearch();
-                              },
-                              icon: const Icon(Icons.clear_rounded),
-                            ),
+                      suffixIcon: _buildSearchSuffix(l10n),
                     ),
                     onChanged: (value) {
                       setState(() {
@@ -140,6 +206,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
                         if (!mounted) return;
                         setState(() {
                           _query = _searchInput.trim();
+                          _pendingCreateBarcode = _looksLikeBarcode(_query) ? _query : null;
                           _future = _load();
                         });
                       });
@@ -174,10 +241,19 @@ class _ProductsScreenState extends State<ProductsScreen> {
                         child: OutlinedButton.icon(
                           onPressed: _applySearch,
                           icon: const Icon(Icons.search_rounded),
-                          label: const Text('Search'),
+                          label: Text(l10n.search),
                         ),
                       ),
                     ],
+                  ),
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    width: double.infinity,
+                    child: FilledButton.icon(
+                      onPressed: () => _openCreateProduct(),
+                      icon: const Icon(Icons.add_box_rounded),
+                      label: Text(l10n.addNewProduct),
+                    ),
                   ),
                 ],
               ),
@@ -187,9 +263,9 @@ class _ProductsScreenState extends State<ProductsScreen> {
               future: _future,
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Padding(
-                    padding: EdgeInsets.only(top: 80),
-                    child: LoadingStateView(message: 'Loading products...'),
+                  return Padding(
+                    padding: const EdgeInsets.only(top: 80),
+                    child: LoadingStateView(message: l10n.loadingProducts),
                   );
                 }
                 if (snapshot.hasError) {
@@ -202,11 +278,22 @@ class _ProductsScreenState extends State<ProductsScreen> {
                 final page = snapshot.data;
                 final rows = page?.rows ?? const <ProductRecord>[];
                 if (rows.isEmpty) {
-                  return const Padding(
-                    padding: EdgeInsets.only(top: 60),
+                  if (_pendingCreateBarcode != null && _pendingCreateBarcode!.isNotEmpty) {
+                    return Padding(
+                      padding: const EdgeInsets.only(top: 60),
+                      child: EmptyStateView(
+                        title: l10n.productNotFound,
+                        description: '${l10n.stockIdBarcode}: ${_pendingCreateBarcode!}',
+                        actionLabel: l10n.addNewProduct,
+                        onAction: () => _openCreateProduct(initialStockId: _pendingCreateBarcode),
+                      ),
+                    );
+                  }
+                  return Padding(
+                    padding: const EdgeInsets.only(top: 60),
                     child: EmptyStateView(
-                      title: 'No products found',
-                      description: 'Try a different search term or refresh the data.',
+                      title: l10n.noProducts,
+                      description: l10n.noProductsFoundDescription,
                     ),
                   );
                 }

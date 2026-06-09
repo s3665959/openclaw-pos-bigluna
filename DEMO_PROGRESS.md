@@ -8,6 +8,13 @@
 
 ## What was fixed
 
+- Added end-to-end `Add New Product` support for the Flutter app through OpenClaw and the live Windows POS Connector.
+- Added a safe `POST /pos-dashboard/api/products/create` route in OpenClaw and a matching `POST /products/create` route in the POS Connector.
+- Product creation now stores the scanned or typed barcode as `StockId` and creates the barcode row at the POS layer.
+- Initial quantity for a newly created product is now applied through the existing guarded `POST /stock/direct-adjust` workflow after the product master row is created.
+- Products screen now has a visible `Add New Product` button and a barcode scan icon in the search field.
+- Scan Barcode now supports manual search by barcode or product name, shows `Product not found` for unknown barcodes, and can open the Add New Product form with `Stock ID / Barcode` prefilled.
+- Duplicate create attempts now return `409` with `This barcode already exists` and include the existing product payload so the mobile UI can open it directly.
 - Root cause for the Android APK mismatch: the Flutter client was calling the host root instead of the connector prefix, so requests such as `/products/list`, `/products/search`, `/stock/summary`, `/products/count`, `/sales/today`, and `/barcode/lookup` were going to the wrong URL and returning HTML, empty data, or misleading fallback values.
 - `AppConfig` now normalizes `API_BASE_URL=https://openclaw.ganseeds.com` to the live connector prefix `/pos-dashboard/api`, matching the web app.
 - Dashboard and System Status were showing misleading values because some model parsing and UI fallbacks were turning missing or failed API data into `0`, `-`, or `unknown`.
@@ -80,6 +87,7 @@
 - `GET /pos-dashboard/api/stock/recent-adjustments`
 - `POST /pos-dashboard/api/stock/direct-adjust`
 - `POST /pos-dashboard/api/products/update`
+- `POST /pos-dashboard/api/products/create`
 - `GET /pos-dashboard/api/product-suppliers?stock_id=`
 - `POST /pos-dashboard/api/product-suppliers`
 - `PUT /pos-dashboard/api/product-suppliers/:id`
@@ -113,6 +121,23 @@
 
 ## Live write verification
 
+- Product create verification direct to POS connector:
+  - `POST /products/create`
+  - Test barcode / stock id: `9000000006091`
+  - Product name: `OPENCLAW TEST PRODUCT 20260609`
+  - POS expected cost written: `5.2000`
+  - Selling price written: `9.9900`
+  - Initial quantity: `0`
+  - Rows affected: `StockItems=1`, `Barcodes=1`
+- Product create verification through OpenClaw:
+  - `POST /pos-dashboard/api/products/create`
+  - Test barcode / stock id: `9000000006092`
+  - Product name: `OPENCLAW API TEST PRODUCT 20260609`
+  - POS expected cost written: `7.25`
+  - Selling price written: `12.5`
+  - Initial quantity requested: `3`
+  - Initial quantity applied: `3` via `stock/direct-adjust`
+  - Duplicate retry returned `409 stock_id_exists` with existing product payload
 - Stock adjustment product: `00001111` (`BO WAGU`)
 - Before stock: `10`
 - Increase: `+1` via `POST /stock/direct-adjust`
@@ -159,6 +184,12 @@
 - `flutter test`: passed
 - `flutter build apk --debug`: passed
 - Debug APK output: `build/app/outputs/flutter-apk/app-debug.apk`
+- Verified live create/search path:
+  - `GET /pos-dashboard/api/barcode/lookup?code=9000000006092`
+  - `GET /pos-dashboard/api/products/detail?q=9000000006092`
+  - `GET /pos-dashboard/api/products/search?q=9000000006092`
+  - `POST /pos-dashboard/api/products/create`
+  - `POST /products/create`
 - Verified live connector endpoints from the corrected prefix:
   - `GET /pos-dashboard/api/products/list?q=orange`
   - `GET /pos-dashboard/api/products/search?q=orange`
@@ -176,6 +207,10 @@
   - Live comparison shows products that save successfully already have a non-null `DefaultVendor` value in the product master, so the public supplier mapping API is not enough to initialize the backend cost row.
   - The live public API did not expose a supported write endpoint to set the missing product-master default vendor linkage directly.
 - Flutter changes in this round:
+  - Added `ProductCreateScreen` for creating products from Products and Scan Barcode.
+  - Added reusable barcode capture screen for Products search.
+  - Products search now offers scan-to-search and create-product fallback for unknown barcodes.
+  - Scan Barcode now distinguishes unknown barcode vs unknown text search and prefills create flow from the scanned barcode.
   - Product actions now report the backend blocker more clearly when the default vendor cost row is missing.
   - Expiry lot date inputs now open a date picker in both the shared product actions sheet and the operations screen.
   - Product cost now prefers POS `pos_expected_cost` (`dbo.StockItems.LastOrderPrice`) and keeps the confirmed update response value if the immediate detail refresh is briefly stale.
